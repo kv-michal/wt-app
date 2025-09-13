@@ -86,6 +86,23 @@
 
         /* Disable look for DUDO */
         .disabled-ui { pointer-events:none; opacity:.6; filter:grayscale(0.1); }
+
+        /* QR block */
+        .qr-container {
+            text-align:center;
+            margin-top:24px;
+        }
+        .qr-container img {
+            background:white;
+            padding:10px;
+            border-radius:12px;
+        }
+        .qr-url {
+            margin-top:8px;
+            font-size:.85rem;
+            opacity:.9;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -117,6 +134,13 @@
         </div>
 
         <div class="status" id="status">Ready to play</div>
+
+        <!-- QR Code at the bottom -->
+        <div class="qr-container">
+            <p>📱 Scan to open this page:</p>
+            <img id="qrCode" alt="QR Code of this page" width="220" height="220" />
+            <div id="qrUrl" class="qr-url"></div>
+        </div>
     </div>
 </div>
 
@@ -475,6 +499,18 @@
 
     // Expose (not required, but handy for console)
     window.setRole = setRole;
+
+    // ----- QR code: use a plain <img> endpoint (no CORS needed) -----
+    const url = window.location.href;
+    const qrImg = document.getElementById('qrCode');
+    const qrUrlText = document.getElementById('qrUrl');
+
+    // Reliable public QR image service:
+    // Works as a simple image, so it avoids CORS preflights.
+    const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
+    const params = new URLSearchParams({ size: '220x220', margin: '0', data: url });
+    qrImg.src = `${QR_ENDPOINT}?${params.toString()}`;
+    qrUrlText.textContent = url;
 </script>
 </body>
 </html>
