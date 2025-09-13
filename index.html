@@ -1,693 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>White Noise Player</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: white;
+            min-height: 100vh; padding: 20px; color: white;
         }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align:center; margin-bottom:18px; font-size:2.2rem; text-shadow:2px 2px 4px rgba(0,0,0,0.3); }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .role-switch {
+            display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:16px;
         }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 40px;
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        .role-pill {
+            display:inline-flex; border:1px solid rgba(255,255,255,0.3); border-radius:999px; overflow:hidden;
         }
+        .role-btn {
+            background:rgba(255,255,255,0.12); border:none; color:#fff; padding:10px 16px; cursor:pointer;
+            font-weight:600; transition: all .2s ease;
+        }
+        .role-btn.active { background:rgba(255,255,255,0.35); }
+        .role-hint { opacity:.85; font-size:.95rem; }
 
         .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
+            display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap:20px; margin-bottom:24px;
         }
-
         .sound-control {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            transition: all 0.3s ease;
+            border:1px solid rgba(255,255,255,0.2);
+            border-radius:15px; padding:20px; transition: all .3s ease;
         }
-
-        .sound-control:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        .sound-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .sound-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sound-icon {
-            font-size: 1.5rem;
-        }
-
+        .sound-control:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .sound-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }
+        .sound-title { font-size:1.2rem; font-weight:600; display:flex; align-items:center; gap:10px; }
+        .sound-icon { font-size:1.5rem; }
         .toggle-btn {
-            width: 60px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 15px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            width:60px; height:30px; background:rgba(255,255,255,0.2);
+            border:none; border-radius:15px; position:relative; cursor:pointer; transition: all .3s ease;
         }
-
-        .toggle-btn.active {
-            background: #4CAF50;
-        }
-
+        .toggle-btn.active { background:#4CAF50; }
         .toggle-btn::after {
-            content: '';
-            width: 26px;
-            height: 26px;
-            background: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            content:''; width:26px; height:26px; background:white; border-radius:50%;
+            position:absolute; top:2px; left:2px; transition: all .3s ease; box-shadow:0 2px 5px rgba(0,0,0,0.2);
         }
-
-        .toggle-btn.active::after {
-            transform: translateX(30px);
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
+        .toggle-btn.active::after { transform: translateX(30px); }
+        .volume-control { display:flex; align-items:center; gap:10px; }
         .volume-slider {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
+            flex:1; height:6px; background:rgba(255,255,255,0.2); border-radius:3px; outline:none; -webkit-appearance:none;
         }
-
         .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            -webkit-appearance:none; width:18px; height:18px; background:white; border-radius:50%;
+            cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);
         }
-
         .volume-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            width:18px; height:18px; background:white; border-radius:50%;
+            cursor:pointer; border:none; box-shadow:0 2px 5px rgba(0,0,0,0.2);
         }
 
         .master-controls {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
+            text-align:center; background:rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.2);
+            border-radius:15px; padding:20px;
         }
-
         .master-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
-            margin: 0 10px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.3);
+            color:white; padding:12px 24px; margin:0 10px 10px; border-radius:25px;
+            cursor:pointer; font-size:1rem; font-weight:600; transition: all .3s ease;
         }
+        .master-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+        .schedule-row { margin-top:12px; display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; }
+        .schedule-row input {
+            width:120px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15); color:#fff; outline:none;
+        }
+        .status { margin-top:10px; font-size:.9rem; opacity:.9; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+        .playing { animation: pulse 2s infinite; }
 
-        .master-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .status {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .playing {
-            animation: pulse 2s infinite;
-        }
+        /* Disable look for DUDO */
+        .disabled-ui { pointer-events:none; opacity:.6; filter:grayscale(0.1); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎵 White Noise Player</h1>
-        
-        <div class="controls" id="soundControls">
-            <!-- Sound controls will be generated by JavaScript -->
-        </div>
+<div class="container">
+    <h1>🎵 White Noise Player</h1>
 
-        <div class="master-controls">
-            <button class="master-btn" onclick="stopAll()">Stop All</button>
-            <button class="master-btn" onclick="toggleMasterVolume()">Mute/Unmute</button>
-            <div class="status" id="status">Ready to play</div>
+    <!-- Role switch -->
+    <div class="role-switch">
+        <span class="role-hint" id="roleHint">Select a role</span>
+        <div class="role-pill">
+            <button id="btn-dudo" class="role-btn">DUDO (listener)</button>
+            <button id="btn-papa" class="role-btn">PAPA (sender)</button>
         </div>
     </div>
 
-    <script>
-        class WhiteNoisePlayer {
-            constructor() {
-                this.audioContext = null;
-                this.sounds = {};
-                this.masterGain = null;
+    <div class="controls disabled-ui" id="soundControls"></div>
+
+    <div class="master-controls disabled-ui" id="masterControls">
+        <button class="master-btn" id="btn-slowlyStopAll">Slowly Stop All</button>
+        <button class="master-btn" id="btn-stopAll">Stop All</button>
+        <button class="master-btn" id="btn-toggleMaster">Mute/Unmute</button>
+        <button class="master-btn" id="btn-resetAll">Reset</button>
+
+        <div class="schedule-row">
+            <label for="stopInMinutes">Stop in</label>
+            <input id="stopInMinutes" type="number" min="0" step="0.1" value="90" />
+            <span>minutes</span>
+            <button class="master-btn" id="btn-scheduleStop">Set Timer</button>
+        </div>
+
+        <div class="status" id="status">Ready to play</div>
+    </div>
+</div>
+
+<script>
+    // ========= Relay Setup (using ntfy.sh) =========
+    const NTFY_TOPIC = 'white-noise-dudo-papa-231h65erh1ehaw3efqwefweg';
+    const RELAY_POST_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
+    const RELAY_SSE_URL  = `https://ntfy.sh/${NTFY_TOPIC}/sse`;
+
+    const CLIENT_ID = (()=>Math.random().toString(36).slice(2))();
+    let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
+    let sse = null;
+
+    function setRole(role) {
+        CURRENT_ROLE = role;
+        document.getElementById('btn-dudo').classList.toggle('active', role==='DUDO');
+        document.getElementById('btn-papa').classList.toggle('active', role==='PAPA');
+        const hint = document.getElementById('roleHint');
+        const master = document.getElementById('masterControls');
+        const controls = document.getElementById('soundControls');
+
+        if (role === 'DUDO') {
+            hint.textContent = '';
+            // master.classList.add('disabled-ui');
+            // controls.classList.add('disabled-ui');
+            master.classList.remove('disabled-ui');
+            controls.classList.remove('disabled-ui');
+            startPolling();
+        } else {
+            hint.textContent = '';
+            master.classList.remove('disabled-ui');
+            controls.classList.remove('disabled-ui');
+            stopPolling();
+        }
+    }
+
+    async function sendRelayEvent(eventName, payload = {}) {
+        if (CURRENT_ROLE !== 'PAPA') return;
+        const body = JSON.stringify({ clientId: CLIENT_ID, role: CURRENT_ROLE, ts: Date.now(), event: { name: eventName, ...payload } });
+        try {
+            await fetch(RELAY_POST_URL, { method: 'POST', body }); // no headers ⇒ avoid CORS preflight
+        } catch (e) { console.warn('Relay send failed:', e); }
+    }
+
+    function startPolling() {
+        sse = new EventSource(RELAY_SSE_URL);
+        sse.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.event !== 'message') return;
+                const evt = JSON.parse(msg.message || '{}');
+                if (evt?.clientId === CLIENT_ID) return;
+                applyRemoteEvent(evt);
+            } catch {}
+        };
+    }
+
+    function stopPolling(){ if (sse){ sse.close(); sse=null; } }
+
+    function applyRemoteEvent(wrapper){
+        if (!wrapper || !wrapper.event) return;
+        const { name, soundId, seconds, minutes } = wrapper.event;
+        switch (name) {
+            case 'toggle': player.toggle(soundId); break;
+            case 'stopAll': player.stopAll(); break;
+            case 'toggleMaster': player.toggleMasterVolume(); break;
+            case 'slowlyStopAll': player.slowlyStopAll(seconds ?? 60); break;
+            case 'resetAll': player.resetAll(); break;
+            case 'scheduleStop': player.scheduleStopInMinutes(minutes ?? 90); break;
+        }
+    }
+
+    // ========= Player (HTMLAudio-based, looped MP3s) =========
+    class WhiteNoisePlayer {
+        constructor() {
+            this.sounds = {}; // id -> { audio, gain (0..1), sliderEl }
+            this.masterLevel = 0.5; // master scalar 0..1
+            this.isMuted = false;
+            this.previousMasterLevel = 0.5;
+            this.stopTimerId = null;
+            this.stopEta = null;
+            this.fadeIntervalId = null;
+
+            // Map to your provided remote MP3s
+            this.soundDefinitions = [
+                { id: 'vacuum',  name: 'Vacuum Cleaner', icon: '🧹', url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3' },
+                { id: 'train',   name: 'Train',           icon: '🚆', url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3' },
+                { id: 'city',    name: 'City',            icon: '🏙️', url: 'https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3' },
+                { id: 'tentrain',name: 'Tent Rain',       icon: '⛺', url: 'https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3' },
+                { id: 'rain',    name: 'Rain',            icon: '🌧️', url: 'https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3' },
+                { id: 'waterfall',name:'Waterfall',       icon: '🏞️', url: 'https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3' },
+                { id: 'people',  name: 'People',          icon: '🗣️', url: 'https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3' },
+                { id: 'ocean',   name: 'Ocean',           icon: '🌊', url: 'https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3' },
+                { id: 'fire',    name: 'Firecamp',        icon: '🔥', url: 'https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3' },
+                { id: 'fan',     name: 'Fan',             icon: '🌀', url: 'https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3' },
+                { id: 'wind',    name: 'Wind',            icon: '💨', url: 'https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3' },
+                { id: 'pink',    name: 'Pink Noise',      icon: '🌸', url: 'https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3' },
+            ];
+
+            this.init();
+        }
+
+        init() {
+            this.createSoundControls();
+            this.wireMasterButtons();
+            this.updateStatus();
+        }
+
+        createSoundControls() {
+            const container = document.getElementById('soundControls');
+            this.soundDefinitions.forEach(sound => {
+                const controlDiv = document.createElement('div');
+                controlDiv.className = 'sound-control';
+                controlDiv.innerHTML = `
+          <div class="sound-header">
+            <div class="sound-title">
+              <span class="sound-icon">${sound.icon}</span>${sound.name}
+            </div>
+            <button class="toggle-btn" id="toggle-${sound.id}"></button>
+          </div>
+          <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" class="volume-slider" id="volume-${sound.id}" min="0" max="100" value="50">
+            <span id="vol-display-${sound.id}">50%</span>
+          </div>`;
+                container.appendChild(controlDiv);
+
+                const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
+                btn.addEventListener('click', async () => {
+                    if (CURRENT_ROLE === 'DUDO') return;
+                    await this.toggle(sound.id);
+                    sendRelayEvent('toggle', { soundId: sound.id });
+                });
+
+                const slider = controlDiv.querySelector(`#volume-${sound.id}`);
+                slider.addEventListener('input', (e) => this.setVolume(sound.id, e.target.value));
+            });
+        }
+
+        wireMasterButtons() {
+            document.getElementById('btn-slowlyStopAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'DUDO') return;
+                this.slowlyStopAll(60);
+                sendRelayEvent('slowlyStopAll', { seconds: 60 });
+            });
+            document.getElementById('btn-stopAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'DUDO') return;
+                this.stopAll();
+                sendRelayEvent('stopAll');
+            });
+            document.getElementById('btn-toggleMaster').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'DUDO') return;
+                this.toggleMasterVolume();
+                sendRelayEvent('toggleMaster');
+            });
+            document.getElementById('btn-resetAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'DUDO') return;
+                this.resetAll();
+                sendRelayEvent('resetAll');
+            });
+            document.getElementById('btn-scheduleStop').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'DUDO') return;
+                const val = Number(document.getElementById('stopInMinutes').value || 90);
+                this.scheduleStopInMinutes(val);
+                sendRelayEvent('scheduleStop', { minutes: val });
+            });
+            document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
+            document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
+        }
+
+        async toggle(soundId) {
+            if (this.sounds[soundId]) { this.stop(soundId); }
+            else { await this.start(soundId); }
+            this.updateStatus();
+        }
+
+        async start(soundId) {
+            const soundDef = this.soundDefinitions.find(s => s.id === soundId);
+            if (!soundDef) return;
+
+            const volumeSlider = document.getElementById(`volume-${soundId}`);
+            const gain = Number(volumeSlider?.value ?? 50) / 100;
+
+            const audio = new Audio();
+            audio.src = soundDef.url;
+            audio.loop = true;
+            audio.preload = 'auto';
+            // audio.crossOrigin = 'anonymous'; // harmless if not used
+            audio.volume = gain * (this.isMuted ? 0 : this.masterLevel);
+
+            try {
+                if (CURRENT_ROLE === 'DUDO') {
+                    await audio.play();
+                }
+            } catch (err) {
+                // Autoplay might be blocked until a user gesture. Show a hint.
+                this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
+                return;
+            }
+
+            this.sounds[soundId] = { audio, gain };
+
+            const btn = document.getElementById(`toggle-${soundId}`);
+            btn?.classList.add('active');
+            btn?.closest('.sound-control')?.classList.add('playing');
+        }
+
+        stop(soundId) {
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+            try {
+                entry.audio.pause();
+                entry.audio.currentTime = 0;
+                entry.audio.src = '';
+            } catch {}
+            delete this.sounds[soundId];
+
+            const btn = document.getElementById(`toggle-${soundId}`);
+            btn?.classList.remove('active');
+            btn?.closest('.sound-control')?.classList.remove('playing');
+        }
+
+        stopAll() {
+            Object.keys(this.sounds).forEach(id => this.stop(id));
+            this.updateStatus();
+        }
+
+        setVolume(soundId, volume) {
+            const v = Number(volume) / 100;
+            const entry = this.sounds[soundId];
+            if (entry) {
+                entry.gain = v;
+                entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * v;
+            }
+            const label = document.getElementById(`vol-display-${soundId}`);
+            if (label) label.textContent = `${Math.round(Number(volume))}%`;
+        }
+
+        toggleMasterVolume() {
+            if (this.isMuted) {
                 this.isMuted = false;
-                this.previousVolume = 0.5;
-                
-                this.soundDefinitions = [
-                    { id: 'whitenoise', name: 'White Noise', icon: '📢', type: 'noise' },
-                    { id: 'pinknoise', name: 'Pink Noise', icon: '🌸', type: 'noise' },
-                    { id: 'brownnoise', name: 'Brown Noise', icon: '🤎', type: 'noise' },
-                    { id: 'vacuum', name: 'Vacuum Cleaner', icon: '🧹', type: 'vacuum' },
-                    { id: 'rain', name: 'Rain', icon: '🌧️', type: 'rain' },
-                    { id: 'ocean', name: 'Ocean Waves', icon: '🌊', type: 'ocean' },
-                    { id: 'wind', name: 'Wind', icon: '💨', type: 'wind' },
-                    { id: 'fire', name: 'Crackling Fire', icon: '🔥', type: 'fire' },
-                    { id: 'fan', name: 'Fan', icon: '🌀', type: 'fan' },
-                    { id: 'thunder', name: 'Thunder', icon: '⚡', type: 'thunder' },
-                    { id: 'birds', name: 'Forest Birds', icon: '🐦', type: 'birds' },
-                    { id: 'cafe', name: 'Coffee Shop', icon: '☕', type: 'cafe' }
-                ];
-
-                this.init();
+                this.masterLevel = this.previousMasterLevel || 0.5;
+            } else {
+                this.previousMasterLevel = this.masterLevel;
+                this.isMuted = true;
             }
+            this.applyMasterToAll();
+            this.updateStatus();
+        }
 
-            async init() {
-                try {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    this.masterGain = this.audioContext.createGain();
-                    this.masterGain.connect(this.audioContext.destination);
-                    this.masterGain.gain.value = 0.5;
-                    
-                    this.createSoundControls();
-                } catch (error) {
-                    console.error('Audio context initialization failed:', error);
-                    document.getElementById('status').textContent = 'Audio not supported in this browser';
-                }
-            }
+        applyMasterToAll() {
+            const level = this.isMuted ? 0 : this.masterLevel;
+            Object.values(this.sounds).forEach(({ audio, gain }) => {
+                audio.volume = level * gain;
+            });
+        }
 
-            createSoundControls() {
-                const container = document.getElementById('soundControls');
-                
-                this.soundDefinitions.forEach(sound => {
-                    const controlDiv = document.createElement('div');
-                    controlDiv.className = 'sound-control';
-                    controlDiv.innerHTML = `
-                        <div class="sound-header">
-                            <div class="sound-title">
-                                <span class="sound-icon">${sound.icon}</span>
-                                ${sound.name}
-                            </div>
-                            <button class="toggle-btn" id="toggle-${sound.id}" onclick="player.toggle('${sound.id}')"></button>
-                        </div>
-                        <div class="volume-control">
-                            <span>🔊</span>
-                            <input type="range" class="volume-slider" id="volume-${sound.id}" 
-                                   min="0" max="100" value="50" 
-                                   oninput="player.setVolume('${sound.id}', this.value)">
-                            <span id="vol-display-${sound.id}">50%</span>
-                        </div>
-                    `;
-                    container.appendChild(controlDiv);
-                });
-            }
+        slowlyStopAll(seconds = 60) {
+            const durMs = Math.max(100, Number(seconds) * 1000 || 60000);
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
 
-            async toggle(soundId) {
-                if (this.audioContext.state === 'suspended') {
-                    await this.audioContext.resume();
-                }
+            const startLevel = this.isMuted ? 0 : this.masterLevel;
+            const startTs = Date.now();
 
-                if (this.sounds[soundId]) {
-                    this.stop(soundId);
-                } else {
-                    this.start(soundId);
-                }
-                this.updateStatus();
-            }
+            this.setStatus(`Fading out over ${Math.round(durMs/1000)}s…`);
 
-            start(soundId) {
-                const soundDef = this.soundDefinitions.find(s => s.id === soundId);
-                if (!soundDef) return;
+            this.fadeIntervalId = setInterval(() => {
+                const elapsed = Date.now() - startTs;
+                const t = Math.min(1, elapsed / durMs);
+                const newLevel = startLevel * (1 - t);
+                this.masterLevel = newLevel;
+                this.applyMasterToAll();
 
-                const gainNode = this.audioContext.createGain();
-                gainNode.connect(this.masterGain);
-                
-                const volumeSlider = document.getElementById(`volume-${soundId}`);
-                gainNode.gain.value = volumeSlider.value / 100;
-
-                let sourceNode;
-                
-                switch(soundDef.type) {
-                    case 'noise':
-                        sourceNode = this.createNoiseSource(soundDef.id);
-                        break;
-                    case 'vacuum':
-                        sourceNode = this.createVacuumSource();
-                        break;
-                    case 'rain':
-                        sourceNode = this.createRainSource();
-                        break;
-                    case 'ocean':
-                        sourceNode = this.createOceanSource();
-                        break;
-                    case 'wind':
-                        sourceNode = this.createWindSource();
-                        break;
-                    case 'fire':
-                        sourceNode = this.createFireSource();
-                        break;
-                    case 'fan':
-                        sourceNode = this.createFanSource();
-                        break;
-                    case 'thunder':
-                        sourceNode = this.createThunderSource();
-                        break;
-                    case 'birds':
-                        sourceNode = this.createBirdsSource();
-                        break;
-                    case 'cafe':
-                        sourceNode = this.createCafeSource();
-                        break;
-                    default:
-                        sourceNode = this.createNoiseSource('whitenoise');
-                }
-
-                if (sourceNode) {
-                    sourceNode.connect(gainNode);
-                    sourceNode.start();
-                    
-                    this.sounds[soundId] = {
-                        source: sourceNode,
-                        gain: gainNode
-                    };
-
-                    document.getElementById(`toggle-${soundId}`).classList.add('active');
-                    document.querySelector(`#toggle-${soundId}`).parentElement.parentElement.classList.add('playing');
-                }
-            }
-
-            stop(soundId) {
-                if (this.sounds[soundId]) {
-                    this.sounds[soundId].source.stop();
-                    delete this.sounds[soundId];
-                    
-                    document.getElementById(`toggle-${soundId}`).classList.remove('active');
-                    document.querySelector(`#toggle-${soundId}`).parentElement.parentElement.classList.remove('playing');
-                }
-            }
-
-            setVolume(soundId, volume) {
-                if (this.sounds[soundId]) {
-                    this.sounds[soundId].gain.gain.value = volume / 100;
-                }
-                document.getElementById(`vol-display-${soundId}`).textContent = volume + '%';
-            }
-
-            createNoiseSource(type) {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        switch(type) {
-                            case 'whitenoise':
-                                output[i] = Math.random() * 2 - 1;
-                                break;
-                            case 'pinknoise':
-                                output[i] = this.generatePinkNoise();
-                                break;
-                            case 'brownnoise':
-                                output[i] = this.generateBrownNoise();
-                                break;
-                        }
-                    }
-                };
-                
-                return scriptNode;
-            }
-
-            generatePinkNoise() {
-                if (!this.pinkNoiseState) {
-                    this.pinkNoiseState = [0, 0, 0, 0, 0, 0, 0];
-                }
-                
-                const white = Math.random() * 2 - 1;
-                this.pinkNoiseState[0] = 0.99886 * this.pinkNoiseState[0] + white * 0.0555179;
-                this.pinkNoiseState[1] = 0.99332 * this.pinkNoiseState[1] + white * 0.0750759;
-                this.pinkNoiseState[2] = 0.96900 * this.pinkNoiseState[2] + white * 0.1538520;
-                this.pinkNoiseState[3] = 0.86650 * this.pinkNoiseState[3] + white * 0.3104856;
-                this.pinkNoiseState[4] = 0.55000 * this.pinkNoiseState[4] + white * 0.5329522;
-                this.pinkNoiseState[5] = -0.7616 * this.pinkNoiseState[5] - white * 0.0168980;
-                
-                const pink = this.pinkNoiseState[0] + this.pinkNoiseState[1] + this.pinkNoiseState[2] + 
-                           this.pinkNoiseState[3] + this.pinkNoiseState[4] + this.pinkNoiseState[5] + 
-                           this.pinkNoiseState[6] + white * 0.5362;
-                
-                this.pinkNoiseState[6] = white * 0.115926;
-                return pink * 0.11;
-            }
-
-            generateBrownNoise() {
-                if (!this.brownNoiseState) this.brownNoiseState = 0;
-                const white = Math.random() * 2 - 1;
-                this.brownNoiseState = (this.brownNoiseState + (0.02 * white)) / 1.02;
-                return this.brownNoiseState * 3.5;
-            }
-
-            createVacuumSource() {
-                const oscillator1 = this.audioContext.createOscillator();
-                const oscillator2 = this.audioContext.createOscillator();
-                const gainNode = this.audioContext.createGain();
-                const filter = this.audioContext.createBiquadFilter();
-                
-                oscillator1.type = 'sawtooth';
-                oscillator1.frequency.setValueAtTime(60, this.audioContext.currentTime);
-                
-                oscillator2.type = 'square';
-                oscillator2.frequency.setValueAtTime(120, this.audioContext.currentTime);
-                
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(800, this.audioContext.currentTime);
-                filter.Q.setValueAtTime(1, this.audioContext.currentTime);
-                
-                const merger = this.audioContext.createChannelMerger(2);
-                oscillator1.connect(gainNode);
-                oscillator2.connect(gainNode);
-                gainNode.connect(filter);
-                filter.connect(merger);
-                
-                // Add some modulation for realism
-                const lfo = this.audioContext.createOscillator();
-                const lfoGain = this.audioContext.createGain();
-                lfo.frequency.setValueAtTime(0.5, this.audioContext.currentTime);
-                lfoGain.gain.setValueAtTime(20, this.audioContext.currentTime);
-                lfo.connect(lfoGain);
-                lfoGain.connect(filter.frequency);
-                lfo.start();
-                
-                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-                
-                return merger;
-            }
-
-            createRainSource() {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        let sample = Math.random() * 2 - 1;
-                        sample = sample * Math.random() * 0.5; // Rain-like droplet sounds
-                        output[i] = sample;
-                    }
-                };
-                
-                const filter = this.audioContext.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.setValueAtTime(2000, this.audioContext.currentTime);
-                filter.Q.setValueAtTime(0.5, this.audioContext.currentTime);
-                
-                scriptNode.connect(filter);
-                return filter;
-            }
-
-            createOceanSource() {
-                const oscillator1 = this.audioContext.createOscillator();
-                const oscillator2 = this.audioContext.createOscillator();
-                const gainNode1 = this.audioContext.createGain();
-                const gainNode2 = this.audioContext.createGain();
-                const filter = this.audioContext.createBiquadFilter();
-                
-                oscillator1.type = 'sine';
-                oscillator1.frequency.setValueAtTime(0.1, this.audioContext.currentTime);
-                
-                oscillator2.type = 'triangle';
-                oscillator2.frequency.setValueAtTime(0.05, this.audioContext.currentTime);
-                
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(400, this.audioContext.currentTime);
-                
-                gainNode1.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-                gainNode2.gain.setValueAtTime(0.2, this.audioContext.currentTime);
-                
-                const merger = this.audioContext.createChannelMerger(2);
-                oscillator1.connect(gainNode1);
-                oscillator2.connect(gainNode2);
-                gainNode1.connect(filter);
-                gainNode2.connect(filter);
-                filter.connect(merger);
-                
-                return merger;
-            }
-
-            createWindSource() {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        output[i] = (Math.random() * 2 - 1) * 0.5;
-                    }
-                };
-                
-                const filter = this.audioContext.createBiquadFilter();
-                filter.type = 'highpass';
-                filter.frequency.setValueAtTime(100, this.audioContext.currentTime);
-                
-                scriptNode.connect(filter);
-                return filter;
-            }
-
-            createFireSource() {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        let sample = Math.random() * 2 - 1;
-                        if (Math.random() < 0.01) sample *= 3; // Occasional crackles
-                        output[i] = sample * 0.3;
-                    }
-                };
-                
-                const filter = this.audioContext.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.setValueAtTime(1500, this.audioContext.currentTime);
-                filter.Q.setValueAtTime(2, this.audioContext.currentTime);
-                
-                scriptNode.connect(filter);
-                return filter;
-            }
-
-            createFanSource() {
-                const oscillator = this.audioContext.createOscillator();
-                const gainNode = this.audioContext.createGain();
-                const filter = this.audioContext.createBiquadFilter();
-                
-                oscillator.type = 'square';
-                oscillator.frequency.setValueAtTime(40, this.audioContext.currentTime);
-                
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(200, this.audioContext.currentTime);
-                
-                gainNode.gain.setValueAtTime(0.4, this.audioContext.currentTime);
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(filter);
-                
-                return filter;
-            }
-
-            createThunderSource() {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                let thunderTimer = 0;
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        thunderTimer++;
-                        if (thunderTimer > 44100 * 10 && Math.random() < 0.0001) { // Thunder every ~10 seconds randomly
-                            output[i] = (Math.random() * 2 - 1) * 2;
-                            thunderTimer = 0;
-                        } else {
-                            output[i] = (Math.random() * 2 - 1) * 0.1; // Light rain between thunder
-                        }
-                    }
-                };
-                
-                const filter = this.audioContext.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(100, this.audioContext.currentTime);
-                
-                scriptNode.connect(filter);
-                return filter;
-            }
-
-            createBirdsSource() {
-                const oscillator1 = this.audioContext.createOscillator();
-                const oscillator2 = this.audioContext.createOscillator();
-                const gainNode1 = this.audioContext.createGain();
-                const gainNode2 = this.audioContext.createGain();
-                
-                oscillator1.type = 'sine';
-                oscillator1.frequency.setValueAtTime(2000, this.audioContext.currentTime);
-                
-                oscillator2.type = 'triangle';
-                oscillator2.frequency.setValueAtTime(3000, this.audioContext.currentTime);
-                
-                gainNode1.gain.setValueAtTime(0.1, this.audioContext.currentTime);
-                gainNode2.gain.setValueAtTime(0.05, this.audioContext.currentTime);
-                
-                // Modulation for bird-like sounds
-                const lfo = this.audioContext.createOscillator();
-                const lfoGain = this.audioContext.createGain();
-                lfo.frequency.setValueAtTime(5, this.audioContext.currentTime);
-                lfoGain.gain.setValueAtTime(500, this.audioContext.currentTime);
-                lfo.connect(lfoGain);
-                lfoGain.connect(oscillator1.frequency);
-                lfo.start();
-                
-                const merger = this.audioContext.createChannelMerger(2);
-                oscillator1.connect(gainNode1);
-                oscillator2.connect(gainNode2);
-                gainNode1.connect(merger);
-                gainNode2.connect(merger);
-                
-                return merger;
-            }
-
-            createCafeSource() {
-                const bufferSize = 4096;
-                const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 0, 1);
-                
-                scriptNode.onaudioprocess = (event) => {
-                    const output = event.outputBuffer.getChannelData(0);
-                    
-                    for (let i = 0; i < bufferSize; i++) {
-                        let sample = (Math.random() * 2 - 1) * 0.2; // Base chatter
-                        if (Math.random() < 0.001) sample += (Math.random() * 2 - 1) * 0.5; // Occasional sounds
-                        output[i] = sample;
-                    }
-                };
-                
-                const filter = this.audioContext.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.setValueAtTime(1000, this.audioContext.currentTime);
-                filter.Q.setValueAtTime(1, this.audioContext.currentTime);
-                
-                scriptNode.connect(filter);
-                return filter;
-            }
-
-            stopAll() {
-                Object.keys(this.sounds).forEach(soundId => {
-                    this.stop(soundId);
-                });
-                this.updateStatus();
-            }
-
-            toggleMasterVolume() {
-                if (this.isMuted) {
-                    this.masterGain.gain.value = this.previousVolume;
+                if (t >= 1) {
+                    clearInterval(this.fadeIntervalId);
+                    this.fadeIntervalId = null;
+                    this.stopAll();
+                    // restore previous master for next play
                     this.isMuted = false;
-                } else {
-                    this.previousVolume = this.masterGain.gain.value;
-                    this.masterGain.gain.value = 0;
-                    this.isMuted = true;
+                    this.masterLevel = this.previousMasterLevel || 0.5;
+                    this.updateStatus();
                 }
-                this.updateStatus();
+            }, 50);
+        }
+
+        resetAll() {
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
+
+            this.stopAll();
+
+            this.soundDefinitions.forEach(s => {
+                const slider = document.getElementById(`volume-${s.id}`);
+                const label = document.getElementById(`vol-display-${s.id}`);
+                if (slider) slider.value = 50;
+                if (label) label.textContent = '50%';
+                const btn = document.getElementById(`toggle-${s.id}`);
+                btn?.classList.remove('active');
+                btn?.closest('.sound-control')?.classList.remove('playing');
+            });
+
+            this.isMuted = false;
+            this.masterLevel = 0.5;
+            this.previousMasterLevel = 0.5;
+
+            const inp = document.getElementById('stopInMinutes');
+            if (inp) inp.value = 90;
+
+            this.setStatus('Reset to initial state');
+        }
+
+        scheduleStopInMinutes(minutes) {
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
+
+            const m = Math.max(0, Number(minutes) || 0);
+            if (m === 0) { this.slowlyStopAll(5); return; }
+            if (m <= 1) { this.slowlyStopAll(m * 60); return; }
+
+            const delayMs = (m - 1) * 60 * 1000;
+            const eta = new Date(Date.now() + delayMs + 60 * 1000);
+            this.stopEta = eta;
+
+            this.stopTimerId = setTimeout(() => {
+                this.slowlyStopAll(60);
+                this.stopTimerId = null; this.stopEta = null;
+            }, delayMs);
+
+            const hh = eta.getHours().toString().padStart(2, '0');
+            const mm = eta.getMinutes().toString().padStart(2, '0');
+            this.setStatus(`Scheduled stop at ${hh}:${mm} (last minute will fade out)`);
+        }
+
+        setStatus(text) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+        }
+
+        updateStatus() {
+            const n = Object.keys(this.sounds).length;
+            const status = document.getElementById('status');
+            if (this.stopEta) {
+                const hh = this.stopEta.getHours().toString().padStart(2, '0');
+                const mm = this.stopEta.getMinutes().toString().padStart(2, '0');
+                status.textContent = `${n === 0 ? 'Ready' : `${n} sound${n>1?'s':''} playing`} • Scheduled stop at ${hh}:${mm}`;
+                return;
             }
-
-            updateStatus() {
-                const playingCount = Object.keys(this.sounds).length;
-                const status = document.getElementById('status');
-                
-                if (playingCount === 0) {
-                    status.textContent = 'Ready to play';
-                } else if (this.isMuted) {
-                    status.textContent = `${playingCount} sound${playingCount > 1 ? 's' : ''} playing (Muted)`;
-                } else {
-                    status.textContent = `${playingCount} sound${playingCount > 1 ? 's' : ''} currently playing`;
-                }
-            }
+            if (n === 0) status.textContent = 'Ready to play';
+            else if (this.isMuted) status.textContent = `${n} sound${n>1?'s':''} playing (Muted)`;
+            else status.textContent = `${n} sound${n>1?'s':''} currently playing`;
         }
+    }
 
-        // Initialize the player
-        let player;
-        
-        window.addEventListener('load', () => {
-            player = new WhiteNoisePlayer();
-        });
+    // Initialize
+    let player;
+    window.addEventListener('load', () => { player = new WhiteNoisePlayer(); });
 
-        // Global functions for buttons
-        function stopAll() {
-            player.stopAll();
-        }
-
-        function toggleMasterVolume() {
-            player.toggleMasterVolume();
-        }
-    </script>
+    // Expose (not required, but handy for console)
+    window.setRole = setRole;
+</script>
 </body>
 </html>
