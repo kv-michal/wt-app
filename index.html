@@ -506,6 +506,7 @@ async start(soundId) {
 
       this.updateStatus();
     } catch (err2) {
+        alert(err2);
       // Still blocked: give a precise hint without changing visuals
       this.setStatus('Audio blocked by the browser. Tap the DUDO button once, then toggle again.');
       throw err2; // keep behavior: no visual change if not truly playing
