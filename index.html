@@ -460,24 +460,66 @@
             this.updateStatus();
         }
 
-        async start(soundId) {
-            const entry = this.sounds[soundId];
-            if (!entry) return;
-            const volumeSlider = document.getElementById(`volume-${soundId}`);
-            entry.gain = Number(volumeSlider?.value ?? 50) / 100;
-            entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
+async start(soundId) {
+  const entry = this.sounds[soundId];
+  if (!entry) return;
 
-            try {
-                if (CURRENT_ROLE === 'DUDO') { await entry.audio.play(); }
-                entry.playing = true;
-            } catch (err) {
-                this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
-                return;
-            }
-            const btn = document.getElementById(`toggle-${soundId}`);
-            btn?.classList.add('active');
-            btn?.closest('.sound-control')?.classList.add('playing');
-        }
+  const volumeSlider = document.getElementById(`volume-${soundId}`);
+  entry.gain = Number(volumeSlider?.value ?? 50) / 100;
+
+  // Target volume based on current master & gain
+  const targetVol = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
+
+  const a = entry.audio;
+
+  // 1) Make autoplay policy happy: ensure muted + volume=0 for initial play()
+  //    (muted autoplay is allowed on Chrome/Android)
+  const prevMuted = a.muted;
+  const prevVol = a.volume;
+  a.muted = true;
+  a.volume = 0;
+
+  try {
+    // 2) Try to play while muted (should always be allowed)
+    await a.play();
+
+    // 3) Immediately unmute and set the *real* volume
+    a.muted = false;
+    a.volume = targetVol;
+
+    entry.playing = true;
+
+    // Update UI ONLY AFTER real playback started
+    const btn = document.getElementById(`toggle-${soundId}`);
+    btn?.classList.add('active');
+    btn?.closest('.sound-control')?.classList.add('playing');
+
+    this.updateStatus();
+  } catch (err) {
+    // Restore previous state on failure (no optimistic UI)
+    a.muted = prevMuted;
+    a.volume = prevVol;
+
+    // Small retry: some devices need a .load() before first play
+    try {
+      a.load();
+      await a.play();
+      a.muted = false;
+      a.volume = targetVol;
+      entry.playing = true;
+
+      const btn = document.getElementById(`toggle-${soundId}`);
+      btn?.classList.add('active');
+      btn?.closest('.sound-control')?.classList.add('playing');
+
+      this.updateStatus();
+    } catch (err2) {
+      // Still blocked: give a precise hint without changing visuals
+      this.setStatus('Audio blocked by the browser. Tap the DUDO button once, then toggle again.');
+      throw err2; // keep behavior: no visual change if not truly playing
+    }
+  }
+}
 
         stop(soundId) {
             const entry = this.sounds[soundId];
