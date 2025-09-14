@@ -72,7 +72,7 @@
             transition: all .2s ease;
         }
 
-        .role-btn:has(+ .active) {
+        .role-btn.inactive {
             opacity: 0.5;
         }
 
@@ -345,7 +345,9 @@
     function setRole(role) {
         CURRENT_ROLE = role;
         document.getElementById('btn-dudo').classList.toggle('active', role === 'DUDO');
+        document.getElementById('btn-dudo').classList.toggle('inactive', role !== 'DUDO');
         document.getElementById('btn-papa').classList.toggle('active', role === 'PAPA');
+        document.getElementById('btn-papa').classList.toggle('inactive', role !== 'PAPA');
         const hint = document.getElementById('roleHint');
         const master = document.getElementById('masterControls');
         const controls = document.getElementById('soundControls');
