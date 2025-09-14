@@ -131,7 +131,7 @@
         if (!debouncedVolumeSenders.has(soundId)) {
             debouncedVolumeSenders.set(
                 soundId,
-                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 1200) // tweak here if you want 50ms
+                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 2000) // tweak here if you want 50ms
             );
         }
         return debouncedVolumeSenders.get(soundId);
@@ -296,6 +296,10 @@
                 btn.addEventListener('click', async () => {
                     if (CURRENT_ROLE === 'PAPA') {
                         sendRelayEvent('toggle', { soundId: sound.id });
+                        // set toggle status immediately
+                        const btn = document.getElementById(`toggle-${sound.id}`);
+                        btn?.classList.toggle('active');
+                        btn?.closest('.sound-control')?.classList.toggle('playing');
                     } else {
                         await this.toggle(sound.id);
                     }
