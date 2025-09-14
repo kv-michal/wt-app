@@ -21,266 +21,46 @@
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3">
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: white;
+            min-height: 100vh; padding: 20px; color: white;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 18px;
-            font-size: 2.2rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .role-switch {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .role-pill {
-            display: inline-flex;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .role-btn {
-            background: rgba(255, 255, 255, 0.12);
-            border: none;
-            color: #fff;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all .2s ease;
-        }
-
-        .role-btn.inactive {
-            opacity: 0.5;
-        }
-
-        .role-btn.active {
-            background: rgba(255, 255, 255, 0.55);
-            text-shadow: 1px 1px 10px #000000b8;
-        }
-
-        .role-hint {
-            opacity: .85;
-            font-size: .95rem;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .sound-control {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            transition: all .3s ease;
-        }
-
-        .sound-control:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .sound-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .sound-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sound-icon {
-            font-size: 1.5rem;
-        }
-
-        .toggle-btn {
-            width: 60px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 15px;
-            position: relative;
-            cursor: pointer;
-            transition: all .3s ease;
-        }
-
-        .toggle-btn.active {
-            background: #4CAF50;
-        }
-
-        .toggle-btn::after {
-            content: '';
-            width: 26px;
-            height: 26px;
-            background: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            transition: all .3s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .toggle-btn.active::after {
-            transform: translateX(30px);
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .volume-slider {
-            flex: 1;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .volume-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .master-controls {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-        }
-
-        .master-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
-            margin: 0 10px 10px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all .3s ease;
-        }
-
-        .master-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .schedule-row {
-            margin-top: 12px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .schedule-row input {
-            width: 120px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            outline: none;
-        }
-
-        .status {
-            margin-top: 10px;
-            font-size: .9rem;
-            opacity: .9;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1
-            }
-            50% {
-                opacity: 0.7
-            }
-        }
-
-        .playing {
-            animation: pulse 2s infinite;
-        }
-
-        .disabled-ui {
-            pointer-events: none;
-            opacity: .6;
-            filter: grayscale(0.1);
-        }
-
-        .qr-container {
-            text-align: center;
-            margin-top: 24px;
-        }
-
-        .qr-container img {
-            background: white;
-            padding: 10px;
-            border-radius: 12px;
-        }
-
-        .qr-url {
-            margin-top: 8px;
-            font-size: .85rem;
-            opacity: .9;
-            word-break: break-all;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .role-pill { display: inline-flex; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; overflow: hidden; }
+        .role-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: 600; transition: all .2s ease; }
+        .role-btn.inactive { opacity: 0.5; }
+        .role-btn.active { background: rgba(255,255,255,0.55); text-shadow: 1px 1px 10px #000000b8; }
+        .role-hint { opacity: .85; font-size: .95rem; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .sound-control { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; transition: all .3s ease; }
+        .sound-control:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .sound-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .sound-title { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .sound-icon { font-size: 1.5rem; }
+        .toggle-btn { width: 60px; height: 30px; background: rgba(255,255,255,0.2); border: none; border-radius: 15px; position: relative; cursor: pointer; transition: all .3s ease; }
+        .toggle-btn.active { background: #4CAF50; }
+        .toggle-btn::after { content: ''; width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: all .3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .toggle-btn.active::after { transform: translateX(30px); }
+        .volume-control { display: flex; align-items: center; gap: 10px; }
+        .volume-slider { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none; -webkit-appearance: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .volume-slider::-moz-range-thumb { width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .master-controls { text-align: center; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; }
+        .master-btn { background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px 24px; margin: 0 10px 10px; border-radius: 25px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all .3s ease; }
+        .master-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+        .schedule-row { margin-top: 12px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        .schedule-row input { width: 120px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.15); color: #fff; outline: none; }
+        .status { margin-top: 10px; font-size: .9rem; opacity: .9; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+        .playing { animation: pulse 2s infinite; }
+        .disabled-ui { pointer-events: none; opacity: .6; filter: grayscale(0.1); }
+        .qr-container { text-align: center; margin-top: 24px; }
+        .qr-container img { background: white; padding: 10px; border-radius: 12px; }
+        .qr-url { margin-top: 8px; font-size: .85rem; opacity: .9; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -348,7 +128,6 @@
         document.getElementById('btn-dudo').classList.toggle('inactive', role !== 'DUDO');
         document.getElementById('btn-papa').classList.toggle('active', role === 'PAPA');
         document.getElementById('btn-papa').classList.toggle('inactive', role !== 'PAPA');
-        const hint = document.getElementById('roleHint');
         const master = document.getElementById('masterControls');
         const controls = document.getElementById('soundControls');
 
@@ -388,8 +167,7 @@
                 const evt = JSON.parse(msg.message || '{}');
                 if (evt?.clientId === CLIENT_ID) return;
                 applyRemoteEvent(evt);
-            } catch {
-            }
+            } catch {}
         };
     }
 
@@ -402,10 +180,16 @@
 
     function applyRemoteEvent(wrapper) {
         if (!wrapper || !wrapper.event) return;
-        const {name, soundId, seconds, minutes} = wrapper.event;
+        const {name, soundId, seconds, minutes, volume} = wrapper.event;
         switch (name) {
             case 'toggle':
                 player.toggle(soundId);
+                break;
+            case 'setVolume':
+                // Update slider UI first, then apply volume logic
+                const slider = document.getElementById(`volume-${soundId}`);
+                if (slider && typeof volume === 'number') slider.value = String(volume);
+                player.setVolume(soundId, volume);
                 break;
             case 'stopAll':
                 player.stopAll();
@@ -438,78 +222,18 @@
             this.fadeIntervalId = null;
 
             this.soundDefinitions = [
-                {
-                    id: 'vacuum',
-                    name: 'Vacuum Cleaner',
-                    icon: '🧹',
-                    url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3'
-                },
-                {
-                    id: 'train',
-                    name: 'Train',
-                    icon: '🚆',
-                    url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3'
-                },
-                {
-                    id: 'city',
-                    name: 'City',
-                    icon: '🏙️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3'
-                },
-                {
-                    id: 'tentrain',
-                    name: 'Tent Rain',
-                    icon: '⛺',
-                    url: 'https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3'
-                },
-                {
-                    id: 'rain',
-                    name: 'Rain',
-                    icon: '🌧️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3'
-                },
-                {
-                    id: 'waterfall',
-                    name: 'Waterfall',
-                    icon: '🏞️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3'
-                },
-                {
-                    id: 'people',
-                    name: 'People',
-                    icon: '🗣️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3'
-                },
-                {
-                    id: 'ocean',
-                    name: 'Ocean',
-                    icon: '🌊',
-                    url: 'https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3'
-                },
-                {
-                    id: 'fire',
-                    name: 'Firecamp',
-                    icon: '🔥',
-                    url: 'https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3'
-                },
-                {
-                    id: 'fan',
-                    name: 'Fan',
-                    icon: '🌀',
-                    url: 'https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3'
-                },
-                {
-                    id: 'wind',
-                    name: 'Wind',
-                    icon: '💨',
-                    url: 'https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3'
-                },
-                {
-                    id: 'pink',
-                    name: 'Pink Noise',
-                    icon: '🌸',
-                    url: 'https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3'
-                },
+                { id: 'vacuum', name: 'Vacuum Cleaner', icon: '🧹', url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3' },
+                { id: 'train', name: 'Train', icon: '🚆', url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3' },
+                { id: 'city', name: 'City', icon: '🏙️', url: 'https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3' },
+                { id: 'tentrain', name: 'Tent Rain', icon: '⛺', url: 'https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3' },
+                { id: 'rain', name: 'Rain', icon: '🌧️', url: 'https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3' },
+                { id: 'waterfall', name: 'Waterfall', icon: '🏞️', url: 'https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3' },
+                { id: 'people', name: 'People', icon: '🗣️', url: 'https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3' },
+                { id: 'ocean', name: 'Ocean', icon: '🌊', url: 'https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3' },
+                { id: 'fire', name: 'Firecamp', icon: '🔥', url: 'https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3' },
+                { id: 'fan', name: 'Fan', icon: '🌀', url: 'https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3' },
+                { id: 'wind', name: 'Wind', icon: '💨', url: 'https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3' },
+                { id: 'pink', name: 'Pink Noise', icon: '🌸', url: 'https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3' },
             ];
 
             this.init();
@@ -523,10 +247,7 @@
                 a.loop = true;
                 a.preload = 'auto';
                 a.volume = 0; // silent until played with computed volume
-                try {
-                    a.load();
-                } catch {
-                }
+                try { a.load(); } catch {}
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
             });
 
@@ -556,42 +277,54 @@
 
                 const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
                 btn.addEventListener('click', async () => {
-                    if (CURRENT_ROLE === 'DUDO') return;
-                    await this.toggle(sound.id);
-                    sendRelayEvent('toggle', {soundId: sound.id});
+                    if (CURRENT_ROLE === 'PAPA') {
+                        // PAPA: only send remote event
+                        sendRelayEvent('toggle', { soundId: sound.id });
+                    } else {
+                        // DUDO: do it locally
+                        await this.toggle(sound.id);
+                    }
                 });
 
                 const slider = controlDiv.querySelector(`#volume-${sound.id}`);
-                slider.addEventListener('input', (e) => this.setVolume(sound.id, e.target.value));
+                slider.addEventListener('input', (e) => {
+                    const vol = Number(e.target.value);
+                    if (CURRENT_ROLE === 'PAPA') {
+                        // Send to DUDO
+                        sendRelayEvent('setVolume', { soundId: sound.id, volume: vol });
+                    } else {
+                        // Adjust locally
+                        this.setVolume(sound.id, vol);
+                    }
+                });
             });
         }
 
         wireMasterButtons() {
             document.getElementById('btn-slowlyStopAll').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'DUDO') return;
-                this.slowlyStopAll(60);
-                sendRelayEvent('slowlyStopAll', {seconds: 60});
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('slowlyStopAll', { seconds: 60 });
+                else this.slowlyStopAll(60);
             });
+
             document.getElementById('btn-stopAll').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'DUDO') return;
-                this.stopAll();
-                sendRelayEvent('stopAll');
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('stopAll');
+                else this.stopAll();
             });
+
             document.getElementById('btn-toggleMaster').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'DUDO') return;
-                this.toggleMasterVolume();
-                sendRelayEvent('toggleMaster');
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('toggleMaster');
+                else this.toggleMasterVolume();
             });
+
             document.getElementById('btn-resetAll').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'DUDO') return;
-                this.resetAll();
-                sendRelayEvent('resetAll');
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('resetAll');
+                else this.resetAll();
             });
+
             document.getElementById('btn-scheduleStop').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'DUDO') return;
                 const val = Number(document.getElementById('stopInMinutes').value || 90);
-                this.scheduleStopInMinutes(val);
-                sendRelayEvent('scheduleStop', {minutes: val});
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('scheduleStop', { minutes: val });
+                else this.scheduleStopInMinutes(val);
             });
             document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
             document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
@@ -620,9 +353,7 @@
             try {
                 if (CURRENT_ROLE === 'DUDO') {
                     await entry.audio.play();
-                } else {
-                    // PAPA doesn't play locally
-                }
+                } // PAPA doesn't play locally
                 entry.playing = true;
             } catch (err) {
                 this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
@@ -639,9 +370,8 @@
             if (!entry) return;
             try {
                 entry.audio.pause();
-                entry.audio.currentTime = 0; // keep src to preserve cache & decoder
-            } catch {
-            }
+                entry.audio.currentTime = 0;
+            } catch {}
             entry.playing = false;
 
             const btn = document.getElementById(`toggle-${soundId}`);
@@ -655,14 +385,19 @@
         }
 
         setVolume(soundId, volume) {
-            const v = Number(volume) / 100;
+            // volume is expected 0..100
+            const vol0to1 = Number(volume) / 100;
             const entry = this.sounds[soundId];
-            if (entry) {
-                entry.gain = v;
-                entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * v;
-            }
+            // Update UI controls to reflect the new volume
+            const slider = document.getElementById(`volume-${soundId}`);
             const label = document.getElementById(`vol-display-${soundId}`);
+            if (slider && slider.value !== String(volume)) slider.value = String(volume);
             if (label) label.textContent = `${Math.round(Number(volume))}%`;
+
+            if (entry) {
+                entry.gain = vol0to1;
+                entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * vol0to1;
+            }
         }
 
         toggleMasterVolume() {
@@ -809,9 +544,7 @@
                     audio.pause();
                     audio.currentTime = 0;
                     audio.volume = prevVol;
-                }).catch(() => {
-                    // Ignore if autoplay still blocked; user will click a control soon.
-                });
+                }).catch(() => {});
             });
         }
     }
