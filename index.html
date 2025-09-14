@@ -131,7 +131,7 @@
         if (!debouncedVolumeSenders.has(soundId)) {
             debouncedVolumeSenders.set(
                 soundId,
-                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 100) // tweak here if you want 50ms
+                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 1200) // tweak here if you want 50ms
             );
         }
         return debouncedVolumeSenders.get(soundId);
