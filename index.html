@@ -163,6 +163,59 @@
     let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
     let sse = null;
 
+    let unlocked = false;
+    async function unlockAllAudioOnceForOldChrome() {
+        if (unlocked) return;
+        unlocked = true;
+
+        // sequential unlock: mute -> play -> pause -> restore volume
+        for (const { audio } of Object.values(player.sounds)) {
+            const prevVol = audio.volume;
+            try {
+                audio.muted = true;              // old Chrome: safest for gesture policy
+                audio.volume = 0;                // extra safety
+                await audio.play();              // directly in this click call stack
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = false;
+                audio.volume = prevVol;
+            } catch (_) {
+                // keep going; some may fail on flaky devices
+            }
+        }
+    }
+
+    function isOldAndroidChrome(thresholdMajor = 107) {
+        const ua = navigator.userAgent || "";
+        const isAndroid = /Android/i.test(ua);
+
+        // Try User-Agent Client Hints first
+        let major = null;
+        if (navigator.userAgentData && Array.isArray(navigator.userAgentData.brands)) {
+            for (const b of navigator.userAgentData.brands) {
+                if (/Chrom(e|ium)/i.test(b.brand)) {
+                    const v = parseInt(String(b.version).split(".")[0], 10);
+                    if (!Number.isNaN(v)) major = v;
+                    break;
+                }
+            }
+        }
+
+        // Fallback to legacy UA
+        if (major == null) {
+            const m = ua.match(/Chrome\/(\d+)/i);
+            if (m) {
+                const v = parseInt(m[1], 10);
+                if (!Number.isNaN(v)) major = v;
+            }
+        }
+
+        // Some Android webviews/shells also need this (Samsung Internet rides Chromium)
+        const isSamsung = /SamsungBrowser/i.test(ua);
+
+        return isAndroid && (isSamsung || (major != null && major < thresholdMajor));
+    }
+
     function debounce(fn, wait = 100) {
         let t;
         return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
@@ -388,7 +441,14 @@
                 if (CURRENT_ROLE === 'PAPA') sendRelayEvent('scheduleStop', { minutes: val });
                 else this.scheduleStopInMinutes(val);
             });
-            document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
+            document.getElementById('btn-dudo').addEventListener('click', () => {
+                setRole('DUDO');
+
+                if (isOldAndroidChrome(107)) {
+                    // Trigger unlock for older chrome
+                    unlockAllAudioOnceForOldChrome();
+                }
+            });
             document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
         }
 
