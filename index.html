@@ -13,20 +13,14 @@
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3">
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3">
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3">
-    <link rel="preload" as="audio"
-          href="https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3">
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3">
-    <link rel="preload" as="audio"
-          href="https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3">
     <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3">
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; padding: 20px; color: white;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
@@ -122,6 +116,27 @@
     let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
     let sse = null;
 
+    // --- small debounce utility ---
+    function debounce(fn, wait = 100) {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), wait);
+        };
+    }
+
+    // Per-sound debounced senders
+    const debouncedVolumeSenders = new Map();
+    function getDebouncedVolumeSender(soundId) {
+        if (!debouncedVolumeSenders.has(soundId)) {
+            debouncedVolumeSenders.set(
+                soundId,
+                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 100) // tweak here if you want 50ms
+            );
+        }
+        return debouncedVolumeSenders.get(soundId);
+    }
+
     function setRole(role) {
         CURRENT_ROLE = role;
         document.getElementById('btn-dudo').classList.toggle('active', role === 'DUDO');
@@ -186,10 +201,12 @@
                 player.toggle(soundId);
                 break;
             case 'setVolume':
-                // Update slider UI first, then apply volume logic
-                const slider = document.getElementById(`volume-${soundId}`);
-                if (slider && typeof volume === 'number') slider.value = String(volume);
-                player.setVolume(soundId, volume);
+                // Update UI first, then internal state
+                if (typeof volume === 'number') {
+                    const slider = document.getElementById(`volume-${soundId}`);
+                    if (slider) slider.value = String(volume);
+                    player.setVolume(soundId, volume);
+                }
                 break;
             case 'stopAll':
                 player.stopAll();
@@ -278,10 +295,8 @@
                 const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
                 btn.addEventListener('click', async () => {
                     if (CURRENT_ROLE === 'PAPA') {
-                        // PAPA: only send remote event
                         sendRelayEvent('toggle', { soundId: sound.id });
                     } else {
-                        // DUDO: do it locally
                         await this.toggle(sound.id);
                     }
                 });
@@ -289,12 +304,11 @@
                 const slider = controlDiv.querySelector(`#volume-${sound.id}`);
                 slider.addEventListener('input', (e) => {
                     const vol = Number(e.target.value);
+                    // Update local UI immediately (even on PAPA)
+                    this.setVolume(sound.id, vol);
+                    // If PAPA, send debounced to DUDO
                     if (CURRENT_ROLE === 'PAPA') {
-                        // Send to DUDO
-                        sendRelayEvent('setVolume', { soundId: sound.id, volume: vol });
-                    } else {
-                        // Adjust locally
-                        this.setVolume(sound.id, vol);
+                        getDebouncedVolumeSender(sound.id)(vol);
                     }
                 });
             });
@@ -388,7 +402,7 @@
             // volume is expected 0..100
             const vol0to1 = Number(volume) / 100;
             const entry = this.sounds[soundId];
-            // Update UI controls to reflect the new volume
+            // Update UI controls
             const slider = document.getElementById(`volume-${soundId}`);
             const label = document.getElementById(`vol-display-${soundId}`);
             if (slider && slider.value !== String(volume)) slider.value = String(volume);
