@@ -822,6 +822,8 @@
 
     // ----- QR code: simple <img> endpoint (no CORS needed) -----
     const url = `${window.location.href}?client=${userId}`;
+        console.log("%c--> userId: %c","color:#f0f;", "color:#ffffff;", userId);
+
     const qrImg = document.getElementById('qrCode');
     const qrUrlText = document.getElementById('qrUrl');
     const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
