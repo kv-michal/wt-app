@@ -144,68 +144,24 @@
 </div>
 
 <script>
+    // UUID
+    function uuidv4() {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+    }
+    const urlParams = new URLSearchParams(window.location.search);
+    const remoteClientId = urlParams.get("client");
+    const userId = remoteClientId ?? uuidv4();
 
     // ========= Relay Setup (using ntfy.sh) =========
-    const NTFY_TOPIC = `white-noise-dudo-papa-sdfdsfdsfdsfdsfdsfsdf`;
+    const NTFY_TOPIC = `white-noise-dudo-papa-${userId}`;
     const RELAY_POST_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
     const RELAY_SSE_URL = `https://ntfy.sh/${NTFY_TOPIC}/sse`;
 
     const CLIENT_ID = (() => Math.random().toString(36).slice(2))();
     let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
     let sse = null;
-
-    let unlocked = false;
-    async function unlockAllAudioOnceForOldChrome() {
-        if (unlocked) return;
-        unlocked = true;
-
-        // sequential unlock: mute -> play -> pause -> restore volume
-        for (const { audio } of Object.values(player.sounds)) {
-            const prevVol = audio.volume;
-            try {
-                audio.muted = true;              // old Chrome: safest for gesture policy
-                audio.volume = 0;                // extra safety
-                await audio.play();              // directly in this click call stack
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
-                audio.volume = prevVol;
-            } catch (_) {
-                // keep going; some may fail on flaky devices
-            }
-        }
-    }
-
-    function isOldAndroidChrome(thresholdMajor = 107) {
-        const ua = navigator.userAgent || "";
-        const isAndroid = /Android/i.test(ua);
-
-        // Try User-Agent Client Hints first
-        let major = null;
-        if (navigator.userAgentData && Array.isArray(navigator.userAgentData.brands)) {
-            for (const b of navigator.userAgentData.brands) {
-                if (/Chrom(e|ium)/i.test(b.brand)) {
-                    const v = parseInt(String(b.version).split(".")[0], 10);
-                    if (!Number.isNaN(v)) major = v;
-                    break;
-                }
-            }
-        }
-
-        // Fallback to legacy UA
-        if (major == null) {
-            const m = ua.match(/Chrome\/(\d+)/i);
-            if (m) {
-                const v = parseInt(m[1], 10);
-                if (!Number.isNaN(v)) major = v;
-            }
-        }
-
-        // Some Android webviews/shells also need this (Samsung Internet rides Chromium)
-        const isSamsung = /SamsungBrowser/i.test(ua);
-
-        return isAndroid && (isSamsung || (major != null && major < thresholdMajor));
-    }
 
     function debounce(fn, wait = 100) {
         let t;
@@ -348,7 +304,6 @@
                 a.src = def.url;
                 a.loop = true;
                 a.preload = 'auto';
-                a.muted = true; 
                 a.volume = 0;
                 try { a.load(); } catch {}
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
@@ -433,14 +388,7 @@
                 if (CURRENT_ROLE === 'PAPA') sendRelayEvent('scheduleStop', { minutes: val });
                 else this.scheduleStopInMinutes(val);
             });
-            document.getElementById('btn-dudo').addEventListener('click', () => {
-                setRole('DUDO');
-
-                if (isOldAndroidChrome(107)) {
-                    // Trigger unlock for older chrome
-                    unlockAllAudioOnceForOldChrome();
-                }
-            });
+            document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
             document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
         }
 
@@ -452,67 +400,24 @@
             this.updateStatus();
         }
 
-async start(soundId) {
-  const entry = this.sounds[soundId];
-  if (!entry) return;
+        async start(soundId) {
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+            const volumeSlider = document.getElementById(`volume-${soundId}`);
+            entry.gain = Number(volumeSlider?.value ?? 50) / 100;
+            entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
 
-  const volumeSlider = document.getElementById(`volume-${soundId}`);
-  entry.gain = Number(volumeSlider?.value ?? 50) / 100;
-
-  // Target volume based on current master & gain
-  const targetVol = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
-
-  const a = entry.audio;
-
-  // 1) Make autoplay policy happy: ensure muted + volume=0 for initial play()
-  //    (muted autoplay is allowed on Chrome/Android)
-  const prevMuted = a.muted;
-  const prevVol = a.volume;
-  a.muted = true;
-  a.volume = 0;
-
-  try {
-    // 2) Try to play while muted (should always be allowed)
-    await a.play();
-
-    // 3) Immediately unmute and set the *real* volume
-    a.muted = false;
-    a.volume = targetVol;
-
-    entry.playing = true;
-
-    // Update UI ONLY AFTER real playback started
-    const btn = document.getElementById(`toggle-${soundId}`);
-    btn?.classList.add('active');
-    btn?.closest('.sound-control')?.classList.add('playing');
-
-    this.updateStatus();
-  } catch (err) {
-    // Restore previous state on failure (no optimistic UI)
-    a.muted = prevMuted;
-    a.volume = prevVol;
-
-    // Small retry: some devices need a .load() before first play
-    try {
-      a.load();
-      await a.play();
-      a.muted = false;
-      a.volume = targetVol;
-      entry.playing = true;
-
-      const btn = document.getElementById(`toggle-${soundId}`);
-      btn?.classList.add('active');
-      btn?.closest('.sound-control')?.classList.add('playing');
-
-      this.updateStatus();
-    } catch (err2) {
-        alert(err2);
-      // Still blocked: give a precise hint without changing visuals
-      this.setStatus('Audio blocked by the browser. Tap the DUDO button once, then toggle again.');
-      throw err2; // keep behavior: no visual change if not truly playing
-    }
-  }
-}
+            try {
+                if (CURRENT_ROLE === 'DUDO') { await entry.audio.play(); }
+                entry.playing = true;
+            } catch (err) {
+                this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
+                return;
+            }
+            const btn = document.getElementById(`toggle-${soundId}`);
+            btn?.classList.add('active');
+            btn?.closest('.sound-control')?.classList.add('playing');
+        }
 
         stop(soundId) {
             const entry = this.sounds[soundId];
@@ -732,6 +637,15 @@ async start(soundId) {
 
     // Expose (handy for console)
     window.setRole = setRole;
+
+    // ----- QR code: simple <img> endpoint (no CORS needed) -----
+    const url = `${window.location.href}?client=${userId}`;
+    const qrImg = document.getElementById('qrCode');
+    const qrUrlText = document.getElementById('qrUrl');
+    const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
+    const params = new URLSearchParams({size: '220x220', margin: '0', data: url});
+    qrImg.src = `${QR_ENDPOINT}?${params.toString()}`;
+    qrUrlText.textContent = url;
 </script>
 </body>
 </html>
