@@ -353,13 +353,11 @@
         const controls = document.getElementById('soundControls');
 
         if (role === 'DUDO') {
-            hint.textContent = '';
             master.classList.remove('disabled-ui');
             controls.classList.remove('disabled-ui');
             player?.primeAll(); // warm up decoders after a user gesture
             startPolling();
         } else {
-            hint.textContent = '';
             master.classList.remove('disabled-ui');
             controls.classList.remove('disabled-ui');
             stopPolling();
