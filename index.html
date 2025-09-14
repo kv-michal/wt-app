@@ -52,6 +52,42 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
         .playing { animation: pulse 2s infinite; }
         .disabled-ui { pointer-events: none; opacity: .6; filter: grayscale(0.1); }
+
+        /* Fade banner */
+        .fade-banner {
+            position: sticky;
+            top: 0;
+            margin: 0 auto 0;
+            max-width: 720px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.6);
+            background: rgba(0,0,0,0.25);
+            padding: 10px 12px;
+            z-index: 1000;
+        }
+        .fade-row { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .fade-chip {
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .fade-time { opacity: .95; font-variant-numeric: tabular-nums; }
+        .fade-bar-wrap {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+        .fade-bar {
+            height: 100%;
+            width: 0%;
+            background: rgba(255,255,255,0.85);
+            transition: width .1s linear;
+        }
+
         .qr-container { text-align: center; margin-top: 24px; }
         .qr-container img { background: white; padding: 10px; border-radius: 12px; }
         .qr-url { margin-top: 8px; font-size: .85rem; opacity: .9; word-break: break-all; }
@@ -59,6 +95,17 @@
 </head>
 <body>
 <div class="container">
+    <!-- Fade banner (appears during slow fade for both roles) -->
+    <div id="fadeBanner" class="fade-banner" hidden>
+        <div class="fade-row" style="margin-bottom:8px;">
+            <span class="fade-chip">Fading out…</span>
+            <span id="fadeTime" class="fade-time">60s left</span>
+        </div>
+        <div class="fade-bar-wrap">
+            <div id="fadeBar" class="fade-bar"></div>
+        </div>
+    </div>
+
     <h1>🎵 White Noise Player</h1>
 
     <!-- Role switch -->
@@ -116,22 +163,17 @@
     let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
     let sse = null;
 
-    // --- small debounce utility ---
     function debounce(fn, wait = 100) {
         let t;
-        return (...args) => {
-            clearTimeout(t);
-            t = setTimeout(() => fn(...args), wait);
-        };
+        return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
     }
 
-    // Per-sound debounced senders
     const debouncedVolumeSenders = new Map();
     function getDebouncedVolumeSender(soundId) {
         if (!debouncedVolumeSenders.has(soundId)) {
             debouncedVolumeSenders.set(
                 soundId,
-                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 2000) // tweak here if you want 50ms
+                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 2000)
             );
         }
         return debouncedVolumeSenders.get(soundId);
@@ -149,7 +191,7 @@
         if (role === 'DUDO') {
             master.classList.remove('disabled-ui');
             controls.classList.remove('disabled-ui');
-            player?.primeAll(); // warm up decoders after a user gesture
+            player?.primeAll();
             startPolling();
         } else {
             master.classList.remove('disabled-ui');
@@ -187,10 +229,7 @@
     }
 
     function stopPolling() {
-        if (sse) {
-            sse.close();
-            sse = null;
-        }
+        if (sse) { sse.close(); sse = null; }
     }
 
     function applyRemoteEvent(wrapper) {
@@ -201,7 +240,6 @@
                 player.toggle(soundId);
                 break;
             case 'setVolume':
-                // Update UI first, then internal state
                 if (typeof volume === 'number') {
                     const slider = document.getElementById(`volume-${soundId}`);
                     if (slider) slider.value = String(volume);
@@ -215,7 +253,7 @@
                 player.toggleMasterVolume();
                 break;
             case 'slowlyStopAll':
-                player.slowlyStopAll(seconds ?? 60);
+                player.slowlyStopAll(seconds ?? 60); // DUDO will show banner + fade
                 break;
             case 'resetAll':
                 player.resetAll();
@@ -226,17 +264,21 @@
         }
     }
 
-    // ========= Player (persistent HTMLAudio elements) =========
+    // ========= Player =========
     class WhiteNoisePlayer {
         constructor() {
-            // id -> { audio, gain (0..1), playing: boolean }
             this.sounds = {};
-            this.masterLevel = 0.5; // master scalar 0..1
+            this.masterLevel = 0.5;
             this.isMuted = false;
             this.previousMasterLevel = 0.5;
             this.stopTimerId = null;
             this.stopEta = null;
             this.fadeIntervalId = null;
+
+            // Fade UI state
+            this.fadeStartTs = null;
+            this.fadeEndTs = null;
+            this.fadeRafId = null;
 
             this.soundDefinitions = [
                 { id: 'vacuum', name: 'Vacuum Cleaner', icon: '🧹', url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3' },
@@ -257,13 +299,12 @@
         }
 
         init() {
-            // Build persistent Audio elements up-front (cache-friendly)
             this.soundDefinitions.forEach(def => {
                 const a = new Audio();
                 a.src = def.url;
                 a.loop = true;
                 a.preload = 'auto';
-                a.volume = 0; // silent until played with computed volume
+                a.volume = 0;
                 try { a.load(); } catch {}
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
             });
@@ -296,7 +337,7 @@
                 btn.addEventListener('click', async () => {
                     if (CURRENT_ROLE === 'PAPA') {
                         sendRelayEvent('toggle', { soundId: sound.id });
-                        // set toggle status immediately
+                        // reflect toggle in PAPA UI immediately
                         const btn = document.getElementById(`toggle-${sound.id}`);
                         btn?.classList.toggle('active');
                         btn?.closest('.sound-control')?.classList.toggle('playing');
@@ -308,9 +349,7 @@
                 const slider = controlDiv.querySelector(`#volume-${sound.id}`);
                 slider.addEventListener('input', (e) => {
                     const vol = Number(e.target.value);
-                    // Update local UI immediately (even on PAPA)
                     this.setVolume(sound.id, vol);
-                    // If PAPA, send debounced to DUDO
                     if (CURRENT_ROLE === 'PAPA') {
                         getDebouncedVolumeSender(sound.id)(vol);
                     }
@@ -320,8 +359,13 @@
 
         wireMasterButtons() {
             document.getElementById('btn-slowlyStopAll').addEventListener('click', () => {
-                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('slowlyStopAll', { seconds: 60 });
-                else this.slowlyStopAll(60);
+                if (CURRENT_ROLE === 'PAPA') {
+                    // show visual feedback locally AND send command to DUDO
+                    this.beginFadeUI(60);
+                    sendRelayEvent('slowlyStopAll', { seconds: 60 });
+                } else {
+                    this.slowlyStopAll(60);
+                }
             });
 
             document.getElementById('btn-stopAll').addEventListener('click', () => {
@@ -351,33 +395,25 @@
         async toggle(soundId) {
             const entry = this.sounds[soundId];
             if (!entry) return;
-            if (entry.playing) {
-                this.stop(soundId);
-            } else {
-                await this.start(soundId);
-            }
+            if (entry.playing) this.stop(soundId);
+            else await this.start(soundId);
             this.updateStatus();
         }
 
         async start(soundId) {
             const entry = this.sounds[soundId];
             if (!entry) return;
-
             const volumeSlider = document.getElementById(`volume-${soundId}`);
             entry.gain = Number(volumeSlider?.value ?? 50) / 100;
-
             entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
 
             try {
-                if (CURRENT_ROLE === 'DUDO') {
-                    await entry.audio.play();
-                } // PAPA doesn't play locally
+                if (CURRENT_ROLE === 'DUDO') { await entry.audio.play(); }
                 entry.playing = true;
             } catch (err) {
                 this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
                 return;
             }
-
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.add('active');
             btn?.closest('.sound-control')?.classList.add('playing');
@@ -386,12 +422,8 @@
         stop(soundId) {
             const entry = this.sounds[soundId];
             if (!entry) return;
-            try {
-                entry.audio.pause();
-                entry.audio.currentTime = 0;
-            } catch {}
+            try { entry.audio.pause(); entry.audio.currentTime = 0; } catch {}
             entry.playing = false;
-
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.remove('active');
             btn?.closest('.sound-control')?.classList.remove('playing');
@@ -399,19 +431,17 @@
 
         stopAll() {
             Object.keys(this.sounds).forEach(id => this.stop(id));
+            this.endFadeUI(); // hide banner if visible
             this.updateStatus();
         }
 
         setVolume(soundId, volume) {
-            // volume is expected 0..100
             const vol0to1 = Number(volume) / 100;
             const entry = this.sounds[soundId];
-            // Update UI controls
             const slider = document.getElementById(`volume-${soundId}`);
             const label = document.getElementById(`vol-display-${soundId}`);
             if (slider && slider.value !== String(volume)) slider.value = String(volume);
             if (label) label.textContent = `${Math.round(Number(volume))}%`;
-
             if (entry) {
                 entry.gain = vol0to1;
                 entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * vol0to1;
@@ -437,12 +467,59 @@
             });
         }
 
+        // ---------- Fade UI helpers ----------
+        beginFadeUI(seconds) {
+            const banner = document.getElementById('fadeBanner');
+            const bar = document.getElementById('fadeBar');
+            const timeEl = document.getElementById('fadeTime');
+
+            const durMs = Math.max(100, Number(seconds) * 1000 || 60000);
+            this.fadeStartTs = Date.now();
+            this.fadeEndTs = this.fadeStartTs + durMs;
+
+            banner.hidden = false;
+
+            const tick = () => {
+                const now = Date.now();
+                const total = this.fadeEndTs - this.fadeStartTs;
+                const remain = Math.max(0, this.fadeEndTs - now);
+                const elapsed = Math.min(total, now - this.fadeStartTs);
+                const pct = total > 0 ? (elapsed / total) : 1;
+
+                if (timeEl) timeEl.textContent = `${Math.ceil(remain / 1000)}s left`;
+                if (bar) bar.style.width = `${Math.round(pct * 100)}%`;
+
+                if (remain > 0) {
+                    this.fadeRafId = requestAnimationFrame(tick);
+                } else {
+                    // keep bar filled until the audio fade function hides banner
+                    this.fadeRafId = null;
+                }
+            };
+            if (this.fadeRafId) cancelAnimationFrame(this.fadeRafId);
+            tick();
+        }
+
+        endFadeUI() {
+            const banner = document.getElementById('fadeBanner');
+            const bar = document.getElementById('fadeBar');
+            const timeEl = document.getElementById('fadeTime');
+            if (this.fadeRafId) { cancelAnimationFrame(this.fadeRafId); this.fadeRafId = null; }
+            if (bar) bar.style.width = '0%';
+            if (timeEl) timeEl.textContent = '';
+            if (banner) banner.hidden = true;
+            this.fadeStartTs = null;
+            this.fadeEndTs = null;
+        }
+        // ------------------------------------
+
         slowlyStopAll(seconds = 60) {
             const durMs = Math.max(100, Number(seconds) * 1000 || 60000);
-            if (this.fadeIntervalId) {
-                clearInterval(this.fadeIntervalId);
-                this.fadeIntervalId = null;
-            }
+
+            // Start/refresh the visual banner for BOTH roles
+            this.beginFadeUI(seconds);
+
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
 
             const startLevel = this.isMuted ? 0 : this.masterLevel;
             const startTs = Date.now();
@@ -463,21 +540,16 @@
                     // restore previous master for next play
                     this.isMuted = false;
                     this.masterLevel = this.previousMasterLevel || 0.5;
+                    this.endFadeUI(); // ensure banner hides
                     this.updateStatus();
                 }
             }, 50);
         }
 
         resetAll() {
-            if (this.stopTimerId) {
-                clearTimeout(this.stopTimerId);
-                this.stopTimerId = null;
-                this.stopEta = null;
-            }
-            if (this.fadeIntervalId) {
-                clearInterval(this.fadeIntervalId);
-                this.fadeIntervalId = null;
-            }
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
+            this.endFadeUI();
 
             this.stopAll();
 
@@ -502,27 +574,18 @@
         }
 
         scheduleStopInMinutes(minutes) {
-            if (this.stopTimerId) {
-                clearTimeout(this.stopTimerId);
-                this.stopTimerId = null;
-                this.stopEta = null;
-            }
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
 
             const m = Math.max(0, Number(minutes) || 0);
-            if (m === 0) {
-                this.slowlyStopAll(5);
-                return;
-            }
-            if (m <= 1) {
-                this.slowlyStopAll(m * 60);
-                return;
-            }
+            if (m === 0) { this.slowlyStopAll(5); return; }
+            if (m <= 1) { this.slowlyStopAll(m * 60); return; }
 
             const delayMs = (m - 1) * 60 * 1000;
             const eta = new Date(Date.now() + delayMs + 60 * 1000);
             this.stopEta = eta;
 
             this.stopTimerId = setTimeout(() => {
+                // When the last minute starts, show the banner and fade
                 this.slowlyStopAll(60);
                 this.stopTimerId = null;
                 this.stopEta = null;
@@ -552,7 +615,6 @@
             else status.textContent = `${n} sound${n > 1 ? 's' : ''} currently playing`;
         }
 
-        // Try to "prime" audio decoders after a user gesture (DUDO only)
         primeAll() {
             if (CURRENT_ROLE !== 'DUDO') return;
             Object.values(this.sounds).forEach(({audio}) => {
