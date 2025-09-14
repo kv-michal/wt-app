@@ -94,7 +94,7 @@
     </style>
 </head>
 <body>
-<div class="container">11
+<div class="container">ww
     <!-- Fade banner (appears during slow fade for both roles) -->
     <div id="fadeBanner" class="fade-banner" hidden>
         <div class="fade-row" style="margin-bottom:8px;">
@@ -357,6 +357,7 @@
                 a.src = def.url;
                 a.loop = true;
                 a.preload = 'auto';
+                a.muted = true; 
                 a.volume = 0;
                 try { a.load(); } catch {}
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
