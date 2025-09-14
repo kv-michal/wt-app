@@ -84,25 +84,11 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
         .playing { animation: pulse 2s infinite; }
 
-        /* Disable look for DUDO */
         .disabled-ui { pointer-events:none; opacity:.6; filter:grayscale(0.1); }
 
-        /* QR block */
-        .qr-container {
-            text-align:center;
-            margin-top:24px;
-        }
-        .qr-container img {
-            background:white;
-            padding:10px;
-            border-radius:12px;
-        }
-        .qr-url {
-            margin-top:8px;
-            font-size:.85rem;
-            opacity:.9;
-            word-break: break-all;
-        }
+        .qr-container { text-align:center; margin-top:24px; }
+        .qr-container img { background:white; padding:10px; border-radius:12px; }
+        .qr-url { margin-top:8px; font-size:.85rem; opacity:.9; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -164,10 +150,9 @@
 
         if (role === 'DUDO') {
             hint.textContent = '';
-            // master.classList.add('disabled-ui');
-            // controls.classList.add('disabled-ui');
             master.classList.remove('disabled-ui');
             controls.classList.remove('disabled-ui');
+            player?.primeAll(); // warm up decoders after a user gesture
             startPolling();
         } else {
             hint.textContent = '';
@@ -213,10 +198,11 @@
         }
     }
 
-    // ========= Player (HTMLAudio-based, looped MP3s) =========
+    // ========= Player (persistent HTMLAudio elements) =========
     class WhiteNoisePlayer {
         constructor() {
-            this.sounds = {}; // id -> { audio, gain (0..1), sliderEl }
+            // id -> { audio, gain (0..1), playing: boolean }
+            this.sounds = {};
             this.masterLevel = 0.5; // master scalar 0..1
             this.isMuted = false;
             this.previousMasterLevel = 0.5;
@@ -224,7 +210,6 @@
             this.stopEta = null;
             this.fadeIntervalId = null;
 
-            // Map to your provided remote MP3s
             this.soundDefinitions = [
                 { id: 'vacuum',  name: 'Vacuum Cleaner', icon: '🧹', url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3' },
                 { id: 'train',   name: 'Train',           icon: '🚆', url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3' },
@@ -244,6 +229,17 @@
         }
 
         init() {
+            // Build persistent Audio elements up-front (cache-friendly)
+            this.soundDefinitions.forEach(def => {
+                const a = new Audio();
+                a.src = def.url;
+                a.loop = true;
+                a.preload = 'auto';
+                a.volume = 0; // silent until played with computed volume
+                try { a.load(); } catch {}
+                this.sounds[def.id] = { audio: a, gain: 0.5, playing: false };
+            });
+
             this.createSoundControls();
             this.wireMasterButtons();
             this.updateStatus();
@@ -312,36 +308,33 @@
         }
 
         async toggle(soundId) {
-            if (this.sounds[soundId]) { this.stop(soundId); }
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+            if (entry.playing) { this.stop(soundId); }
             else { await this.start(soundId); }
             this.updateStatus();
         }
 
         async start(soundId) {
-            const soundDef = this.soundDefinitions.find(s => s.id === soundId);
-            if (!soundDef) return;
+            const entry = this.sounds[soundId];
+            if (!entry) return;
 
             const volumeSlider = document.getElementById(`volume-${soundId}`);
-            const gain = Number(volumeSlider?.value ?? 50) / 100;
+            entry.gain = Number(volumeSlider?.value ?? 50) / 100;
 
-            const audio = new Audio();
-            audio.src = soundDef.url;
-            audio.loop = true;
-            audio.preload = 'auto';
-            // audio.crossOrigin = 'anonymous'; // harmless if not used
-            audio.volume = gain * (this.isMuted ? 0 : this.masterLevel);
+            entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
 
             try {
                 if (CURRENT_ROLE === 'DUDO') {
-                    await audio.play();
+                    await entry.audio.play();
+                } else {
+                    // PAPA doesn't play locally
                 }
+                entry.playing = true;
             } catch (err) {
-                // Autoplay might be blocked until a user gesture. Show a hint.
                 this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
                 return;
             }
-
-            this.sounds[soundId] = { audio, gain };
 
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.add('active');
@@ -353,10 +346,9 @@
             if (!entry) return;
             try {
                 entry.audio.pause();
-                entry.audio.currentTime = 0;
-                entry.audio.src = '';
+                entry.audio.currentTime = 0; // keep src to preserve cache & decoder
             } catch {}
-            delete this.sounds[soundId];
+            entry.playing = false;
 
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.remove('active');
@@ -479,7 +471,7 @@
         }
 
         updateStatus() {
-            const n = Object.keys(this.sounds).length;
+            const n = Object.values(this.sounds).filter(s => s.playing).length;
             const status = document.getElementById('status');
             if (this.stopEta) {
                 const hh = this.stopEta.getHours().toString().padStart(2, '0');
@@ -491,22 +483,35 @@
             else if (this.isMuted) status.textContent = `${n} sound${n>1?'s':''} playing (Muted)`;
             else status.textContent = `${n} sound${n>1?'s':''} currently playing`;
         }
+
+        // Try to "prime" audio decoders after a user gesture (DUDO only)
+        primeAll() {
+            if (CURRENT_ROLE !== 'DUDO') return;
+            Object.values(this.sounds).forEach(({ audio }) => {
+                const prevVol = audio.volume;
+                audio.volume = 0;
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.volume = prevVol;
+                }).catch(() => {
+                    // Ignore if autoplay still blocked; user will click a control soon.
+                });
+            });
+        }
     }
 
     // Initialize
     let player;
     window.addEventListener('load', () => { player = new WhiteNoisePlayer(); });
 
-    // Expose (not required, but handy for console)
+    // Expose (handy for console)
     window.setRole = setRole;
 
-    // ----- QR code: use a plain <img> endpoint (no CORS needed) -----
+    // ----- QR code: simple <img> endpoint (no CORS needed) -----
     const url = window.location.href;
     const qrImg = document.getElementById('qrCode');
     const qrUrlText = document.getElementById('qrUrl');
-
-    // Reliable public QR image service:
-    // Works as a simple image, so it avoids CORS preflights.
     const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
     const params = new URLSearchParams({ size: '220x220', margin: '0', data: url });
     qrImg.src = `${QR_ENDPOINT}?${params.toString()}`;
