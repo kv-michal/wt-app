@@ -94,7 +94,7 @@
     </style>
 </head>
 <body>
-<div class="container">ww
+<div class="container">
     <!-- Fade banner (appears during slow fade for both roles) -->
     <div id="fadeBanner" class="fade-banner" hidden>
         <div class="fade-row" style="margin-bottom:8px;">
@@ -144,18 +144,9 @@
 </div>
 
 <script>
-    // UUID
-    function uuidv4() {
-        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-        );
-    }
-    const urlParams = new URLSearchParams(window.location.search);
-    const remoteClientId = urlParams.get("client");
-    const userId = remoteClientId ?? uuidv4();
 
     // ========= Relay Setup (using ntfy.sh) =========
-    const NTFY_TOPIC = `white-noise-dudo-papa-${userId}`;
+    const NTFY_TOPIC = `white-noise-dudo-papa-sdfdsfdsfdsfdsfdsfsdf`;
     const RELAY_POST_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
     const RELAY_SSE_URL = `https://ntfy.sh/${NTFY_TOPIC}/sse`;
 
@@ -740,15 +731,6 @@ async start(soundId) {
 
     // Expose (handy for console)
     window.setRole = setRole;
-
-    // ----- QR code: simple <img> endpoint (no CORS needed) -----
-    const url = `${window.location.href}?client=${userId}`;
-    const qrImg = document.getElementById('qrCode');
-    const qrUrlText = document.getElementById('qrUrl');
-    const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
-    const params = new URLSearchParams({size: '220x220', margin: '0', data: url});
-    qrImg.src = `${QR_ENDPOINT}?${params.toString()}`;
-    qrUrlText.textContent = url;
 </script>
 </body>
 </html>
