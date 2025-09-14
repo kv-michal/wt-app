@@ -72,8 +72,13 @@
             transition: all .2s ease;
         }
 
+        .role-btn:has(+ .active) {
+            opacity: 0.5;
+        }
+
         .role-btn.active {
-            background: rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.55);
+            text-shadow: 1px 1px 10px #000000b8;
         }
 
         .role-hint {
@@ -286,8 +291,8 @@
     <div class="role-switch">
         <span class="role-hint" id="roleHint">Select a role</span>
         <div class="role-pill">
-            <button id="btn-dudo" class="role-btn">DUDO (listener)</button>
-            <button id="btn-papa" class="role-btn">PAPA (sender)</button>
+            <button id="btn-dudo" class="role-btn">DUDO</button>
+            <button id="btn-papa" class="role-btn">PAPA</button>
         </div>
     </div>
 
@@ -822,8 +827,6 @@
 
     // ----- QR code: simple <img> endpoint (no CORS needed) -----
     const url = `${window.location.href}?client=${userId}`;
-        console.log("%c--> userId: %c","color:#f0f;", "color:#ffffff;", userId);
-
     const qrImg = document.getElementById('qrCode');
     const qrUrlText = document.getElementById('qrUrl');
     const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
