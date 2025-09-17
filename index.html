@@ -23,7 +23,7 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-        
+
         /* Audio unlock banner */
         .unlock-banner {
             position: sticky;
@@ -48,7 +48,7 @@
             margin-top: 10px;
         }
         .unlock-btn:hover { background: #f57c00; }
-        
+
         .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
         .role-pill { display: inline-flex; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; overflow: hidden; }
         .role-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: 600; transition: all .2s ease; }
@@ -343,15 +343,15 @@
                 a.loop = true;
                 a.volume = 0;
                 a.muted = true; // Start muted to avoid autoplay issues
-                
+
                 // Remove preload for older Chrome compatibility
                 a.preload = 'metadata'; // Changed from 'auto'
-                
+
                 // Add event listeners for better error handling
                 a.addEventListener('loadstart', () => console.log(`Loading ${def.id}`));
                 a.addEventListener('canplaythrough', () => console.log(`Ready to play ${def.id}`));
                 a.addEventListener('error', (e) => console.warn(`Audio error for ${def.id}:`, e));
-                
+
                 try { a.load(); } catch (e) { console.warn(`Load error for ${def.id}:`, e); }
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
             });
@@ -365,7 +365,7 @@
         setupAudioUnlock() {
             const unlockBanner = document.getElementById('unlockBanner');
             const unlockBtn = document.getElementById('unlockBtn');
-            
+
             unlockBtn.addEventListener('click', async () => {
                 await this.unlockAudio();
                 unlockBanner.hidden = true;
@@ -376,22 +376,24 @@
         }
 
         async checkAudioUnlockNeeded() {
-            // Try to play a silent audio to test autoplay
             const testAudio = new Audio();
-            testAudio.volume = 0;
+            // Use a valid source (silent wav or tiny base64 clip)
+            testAudio.src =
+                "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
             testAudio.muted = true;
-            
+
             try {
                 const playPromise = testAudio.play();
                 if (playPromise) {
                     await playPromise;
                     testAudio.pause();
                     this.audioUnlocked = true;
+                } else {
+                    this.audioUnlocked = false;
                 }
             } catch (e) {
-                // Autoplay blocked - show unlock banner
                 this.audioUnlocked = false;
-                const unlockBanner = document.getElementById('unlockBanner');
+                const unlockBanner = document.getElementById("unlockBanner");
                 if (unlockBanner) unlockBanner.hidden = false;
             }
         }
@@ -399,7 +401,7 @@
         async unlockAudio() {
             console.log('Unlocking audio...');
             this.audioUnlocked = true;
-            
+
             // Prime all audio elements with a user gesture
             const promises = Object.values(this.sounds).map(async ({audio}) => {
                 try {
@@ -413,15 +415,15 @@
                     console.warn('Failed to prime audio:', e);
                 }
             });
-            
+
             await Promise.all(promises);
-            
+
             // Retry any pending plays
             for (const soundId of this.pendingPlays) {
                 await this.start(soundId);
             }
             this.pendingPlays.clear();
-            
+
             this.setStatus('Audio unlocked - ready to play');
         }
 
@@ -514,7 +516,7 @@
         async start(soundId) {
             const entry = this.sounds[soundId];
             if (!entry) return;
-            
+
             // Check if audio is unlocked
             if (!this.audioUnlocked && CURRENT_ROLE === 'DUDO') {
                 this.pendingPlays.add(soundId);
@@ -529,7 +531,7 @@
             entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
 
             try {
-                if (CURRENT_ROLE === 'DUDO') { 
+                if (CURRENT_ROLE === 'DUDO') {
                     // Ensure audio is ready before playing
                     if (entry.audio.readyState < 2) {
                         this.setStatus(`Loading ${soundId}...`);
@@ -551,7 +553,7 @@
                             entry.audio.addEventListener('error', onError);
                         });
                     }
-                    await entry.audio.play(); 
+                    await entry.audio.play();
                 }
                 entry.playing = true;
             } catch (err) {
@@ -567,7 +569,7 @@
                 }
                 return;
             }
-            
+
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.add('active');
             btn?.closest('.sound-control')?.classList.add('playing');
@@ -764,12 +766,12 @@
         updateStatus() {
             const n = Object.values(this.sounds).filter(s => s.playing).length;
             const status = document.getElementById('status');
-            
+
             if (this.pendingPlays.size > 0) {
                 status.textContent = `${this.pendingPlays.size} sound${this.pendingPlays.size > 1 ? 's' : ''} pending - tap "Enable Audio"`;
                 return;
             }
-            
+
             if (this.stopEta) {
                 const hh = this.stopEta.getHours().toString().padStart(2, '0');
                 const mm = this.stopEta.getMinutes().toString().padStart(2, '0');
@@ -784,7 +786,7 @@
         primeAll() {
             if (CURRENT_ROLE !== 'DUDO') return;
             if (!this.audioUnlocked) return;
-            
+
             Object.values(this.sounds).forEach(({audio}) => {
                 const prevVol = audio.volume;
                 audio.volume = 0;
