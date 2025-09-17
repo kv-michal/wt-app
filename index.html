@@ -23,6 +23,32 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        
+        /* Audio unlock banner */
+        .unlock-banner {
+            position: sticky;
+            top: 0;
+            margin: 0 auto 20px;
+            max-width: 720px;
+            border-radius: 12px;
+            border: 2px solid #ff9800;
+            background: rgba(255, 152, 0, 0.2);
+            padding: 15px;
+            text-align: center;
+            z-index: 1000;
+        }
+        .unlock-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .unlock-btn:hover { background: #f57c00; }
+        
         .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
         .role-pill { display: inline-flex; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; overflow: hidden; }
         .role-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: 600; transition: all .2s ease; }
@@ -95,6 +121,15 @@
 </head>
 <body>
 <div class="container">
+    <!-- Audio unlock banner (appears when needed) -->
+    <div id="unlockBanner" class="unlock-banner" hidden>
+        <div>🔊 Audio needs to be unlocked for playback</div>
+        <div style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">
+            Tap the button below to enable audio, then try playing sounds again
+        </div>
+        <button id="unlockBtn" class="unlock-btn">Enable Audio</button>
+    </div>
+
     <!-- Fade banner (appears during slow fade for both roles) -->
     <div id="fadeBanner" class="fade-banner" hidden>
         <div class="fade-row" style="margin-bottom:8px;">
@@ -274,6 +309,8 @@
             this.stopTimerId = null;
             this.stopEta = null;
             this.fadeIntervalId = null;
+            this.audioUnlocked = false;
+            this.pendingPlays = new Set();
 
             // Fade UI state
             this.fadeStartTs = null;
@@ -299,19 +336,116 @@
         }
 
         init() {
+            // Create audio elements with better initialization for older Chrome
             this.soundDefinitions.forEach(def => {
                 const a = new Audio();
                 a.src = def.url;
                 a.loop = true;
-                a.preload = 'auto';
                 a.volume = 0;
-                try { a.load(); } catch {}
+                a.muted = true; // Start muted to avoid autoplay issues
+                
+                // Remove preload for older Chrome compatibility
+                a.preload = 'metadata'; // Changed from 'auto'
+                
+                // Add event listeners for better error handling
+                a.addEventListener('loadstart', () => console.log(`Loading ${def.id}`));
+                a.addEventListener('canplaythrough', () => console.log(`Ready to play ${def.id}`));
+                a.addEventListener('error', (e) => console.warn(`Audio error for ${def.id}:`, e));
+                
+                try { a.load(); } catch (e) { console.warn(`Load error for ${def.id}:`, e); }
                 this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
             });
 
             this.createSoundControls();
             this.wireMasterButtons();
+            this.setupAudioUnlock();
             this.updateStatus();
+        }
+
+        setupAudioUnlock() {
+            const unlockBanner = document.getElementById('unlockBanner');
+            const unlockBtn = document.getElementById('unlockBtn');
+            
+            unlockBtn.addEventListener('click', async () => {
+                await this.unlockAudio();
+                unlockBanner.hidden = true;
+            });
+
+            // Only check for older Chrome versions that need unlock
+            if (this.isOlderChromeVersion()) {
+                this.checkAudioUnlockNeeded();
+            } else {
+                // Modern browsers - assume audio works
+                this.audioUnlocked = true;
+            }
+        }
+
+        isOlderChromeVersion() {
+            const userAgent = navigator.userAgent;
+            
+            // Check if it's Chrome/Chromium-based
+            const isChromeish = /Chrome\/(\d+)/.test(userAgent) && !/Edg\//.test(userAgent);
+            if (!isChromeish) return false;
+            
+            // Extract Chrome version
+            const chromeVersionMatch = userAgent.match(/Chrome\/(\d+)/);
+            if (!chromeVersionMatch) return false;
+            
+            const chromeVersion = parseInt(chromeVersionMatch[1], 10);
+            
+            // Show unlock banner for Chrome versions 106 and below
+            // (these versions had stricter autoplay policies)
+            return chromeVersion <= 110;
+        }
+
+        async checkAudioUnlockNeeded() {
+            // Try to play a silent audio to test autoplay
+            const testAudio = new Audio();
+            testAudio.volume = 0;
+            testAudio.muted = true;
+            
+            try {
+                const playPromise = testAudio.play();
+                if (playPromise) {
+                    await playPromise;
+                    testAudio.pause();
+                    this.audioUnlocked = true;
+                }
+            } catch (e) {
+                // Autoplay blocked - show unlock banner for older Chrome
+                this.audioUnlocked = false;
+                const unlockBanner = document.getElementById('unlockBanner');
+                if (unlockBanner) unlockBanner.hidden = false;
+            }
+        }
+
+        async unlockAudio() {
+            console.log('Unlocking audio...');
+            this.audioUnlocked = true;
+            
+            // Prime all audio elements with a user gesture
+            const promises = Object.values(this.sounds).map(async ({audio}) => {
+                try {
+                    audio.muted = false;
+                    audio.volume = 0;
+                    const playPromise = audio.play();
+                    if (playPromise) await playPromise;
+                    audio.pause();
+                    audio.currentTime = 0;
+                } catch (e) {
+                    console.warn('Failed to prime audio:', e);
+                }
+            });
+            
+            await Promise.all(promises);
+            
+            // Retry any pending plays
+            for (const soundId of this.pendingPlays) {
+                await this.start(soundId);
+            }
+            this.pendingPlays.clear();
+            
+            this.setStatus('Audio unlocked - ready to play');
         }
 
         createSoundControls() {
@@ -403,17 +537,63 @@
         async start(soundId) {
             const entry = this.sounds[soundId];
             if (!entry) return;
+            
+            // Check if audio is unlocked (only for older Chrome versions)
+            if (!this.audioUnlocked && CURRENT_ROLE === 'DUDO' && this.isOlderChromeVersion()) {
+                this.pendingPlays.add(soundId);
+                const unlockBanner = document.getElementById('unlockBanner');
+                if (unlockBanner) unlockBanner.hidden = false;
+                this.setStatus('Audio blocked - tap "Enable Audio" button first');
+                return;
+            }
+
             const volumeSlider = document.getElementById(`volume-${soundId}`);
             entry.gain = Number(volumeSlider?.value ?? 50) / 100;
             entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
 
             try {
-                if (CURRENT_ROLE === 'DUDO') { await entry.audio.play(); }
+                if (CURRENT_ROLE === 'DUDO') { 
+                    // For older Chrome, ensure audio is ready before playing
+                    if (this.isOlderChromeVersion() && entry.audio.readyState < 2) {
+                        this.setStatus(`Loading ${soundId}...`);
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                            const onReady = () => {
+                                clearTimeout(timeout);
+                                entry.audio.removeEventListener('canplaythrough', onReady);
+                                entry.audio.removeEventListener('error', onError);
+                                resolve();
+                            };
+                            const onError = (e) => {
+                                clearTimeout(timeout);
+                                entry.audio.removeEventListener('canplaythrough', onReady);
+                                entry.audio.removeEventListener('error', onError);
+                                reject(e);
+                            };
+                            entry.audio.addEventListener('canplaythrough', onReady);
+                            entry.audio.addEventListener('error', onError);
+                        });
+                    }
+                    await entry.audio.play(); 
+                }
                 entry.playing = true;
             } catch (err) {
-                this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
+                console.warn(`Failed to play ${soundId}:`, err);
+                if ((err.name === 'NotAllowedError' || err.message.includes('user activation')) && this.isOlderChromeVersion()) {
+                    this.audioUnlocked = false;
+                    this.pendingPlays.add(soundId);
+                    const unlockBanner = document.getElementById('unlockBanner');
+                    if (unlockBanner) unlockBanner.hidden = false;
+                    this.setStatus('Audio blocked - tap "Enable Audio" button first');
+                } else if (err.name === 'NotAllowedError' || err.message.includes('user activation')) {
+                    // Modern browsers - try to handle gracefully without banner
+                    this.setStatus('Please interact with the page first, then try again');
+                } else {
+                    this.setStatus(`Failed to play ${soundId}: ${err.message}`);
+                }
                 return;
             }
+            
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.add('active');
             btn?.closest('.sound-control')?.classList.add('playing');
@@ -424,6 +604,7 @@
             if (!entry) return;
             try { entry.audio.pause(); entry.audio.currentTime = 0; } catch {}
             entry.playing = false;
+            this.pendingPlays.delete(soundId);
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.remove('active');
             btn?.closest('.sound-control')?.classList.remove('playing');
@@ -552,6 +733,7 @@
             this.endFadeUI();
 
             this.stopAll();
+            this.pendingPlays.clear();
 
             this.soundDefinitions.forEach(s => {
                 const slider = document.getElementById(`volume-${s.id}`);
@@ -569,6 +751,10 @@
 
             const inp = document.getElementById('stopInMinutes');
             if (inp) inp.value = 90;
+
+            // Hide unlock banner on reset
+            const unlockBanner = document.getElementById('unlockBanner');
+            if (unlockBanner) unlockBanner.hidden = true;
 
             this.setStatus('Reset to initial state');
         }
@@ -604,6 +790,12 @@
         updateStatus() {
             const n = Object.values(this.sounds).filter(s => s.playing).length;
             const status = document.getElementById('status');
+            
+            if (this.pendingPlays.size > 0) {
+                status.textContent = `${this.pendingPlays.size} sound${this.pendingPlays.size > 1 ? 's' : ''} pending - tap "Enable Audio"`;
+                return;
+            }
+            
             if (this.stopEta) {
                 const hh = this.stopEta.getHours().toString().padStart(2, '0');
                 const mm = this.stopEta.getMinutes().toString().padStart(2, '0');
@@ -617,6 +809,8 @@
 
         primeAll() {
             if (CURRENT_ROLE !== 'DUDO') return;
+            if (!this.audioUnlocked) return;
+            
             Object.values(this.sounds).forEach(({audio}) => {
                 const prevVol = audio.volume;
                 audio.volume = 0;
