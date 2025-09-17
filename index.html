@@ -1,90 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>White Noise Player</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#667eea">
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#667eea">
-  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+<!-- iOS Home Screen (iOS uses these, not the manifest icons) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>White Noise Player</title>
+    <!-- Preload hints to encourage early caching (no CORS preflight; plain link tags) -->
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3">
+    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3">
 
-  <!-- Preload hints (keep as you had) -->
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3">
-  <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
 
-  <style>
-    /* your existing CSS unchanged */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { text-align: center; margin-bottom: 18px; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-    .unlock-banner { position: sticky; top: 0; margin: 0 auto 20px; max-width: 720px; border-radius: 12px; border: 2px solid #ff9800; background: rgba(255, 152, 0, 0.2); padding: 15px; text-align: center; z-index: 1000; }
-    .unlock-btn { background: #ff9800; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    .unlock-btn:hover { background: #f57c00; }
-    .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .role-pill { display: inline-flex; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; overflow: hidden; }
-    .role-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: 600; transition: all .2s ease; }
-    .role-btn.inactive { opacity: 0.5; }
-    .role-btn.active { background: rgba(255,255,255,0.55); text-shadow: 1px 1px 10px #000000b8; }
-    .role-hint { opacity: .85; font-size: .95rem; }
-    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px; }
-    .sound-control { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; transition: all .3s ease; }
-    .sound-control:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    .sound-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-    .sound-title { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-    .sound-icon { font-size: 1.5rem; }
-    .toggle-btn { width: 60px; height: 30px; background: rgba(255,255,255,0.2); border: none; border-radius: 15px; position: relative; cursor: pointer; transition: all .3s ease; }
-    .toggle-btn.active { background: #4CAF50; }
-    .toggle-btn::after { content: ''; width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: all .3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .toggle-btn.active::after { transform: translateX(30px); }
-    .volume-control { display: flex; align-items: center; gap: 10px; }
-    .volume-slider { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none; -webkit-appearance: none; }
-    .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .volume-slider::-moz-range-thumb { width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .master-controls { text-align: center; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; }
-    .master-btn { background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px 24px; margin: 0 10px 10px; border-radius: 25px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all .3s ease; }
-    .master-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
-    .schedule-row { margin-top: 12px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
-    .schedule-row input { width: 120px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.15); color: #fff; outline: none; }
-    .status { margin-top: 10px; font-size: .9rem; opacity: .9; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
-    .playing { animation: pulse 2s infinite; }
-    .disabled-ui { pointer-events: none; opacity: .6; filter: grayscale(0.1); }
-    .fade-banner { position: sticky; top: 0; margin: 0 auto 0; max-width: 720px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.25); padding: 10px 12px; z-index: 1000; }
-    .fade-row { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    .fade-chip { font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.25); }
-    .fade-time { opacity: .95; font-variant-numeric: tabular-nums; }
-    .fade-bar-wrap { width: 100%; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.2); overflow: hidden; }
-    .fade-bar { height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .1s linear; }
-    .qr-container { text-align: center; margin-top: 24px; }
-    .qr-container img { background: white; padding: 10px; border-radius: 12px; }
-    .qr-url { margin-top: 8px; font-size: .85rem; opacity: .9; word-break: break-all; }
-  </style>
+        /* Audio unlock banner */
+        .unlock-banner {
+            position: sticky;
+            top: 0;
+            margin: 0 auto 20px;
+            max-width: 720px;
+            border-radius: 12px;
+            border: 2px solid #ff9800;
+            background: rgba(255, 152, 0, 0.2);
+            padding: 15px;
+            text-align: center;
+            z-index: 1000;
+        }
+        .unlock-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .unlock-btn:hover { background: #f57c00; }
+
+        .role-switch { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .role-pill { display: inline-flex; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; overflow: hidden; }
+        .role-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: 600; transition: all .2s ease; }
+        .role-btn.inactive { opacity: 0.5; }
+        .role-btn.active { background: rgba(255,255,255,0.55); text-shadow: 1px 1px 10px #000000b8; }
+        .role-hint { opacity: .85; font-size: .95rem; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .sound-control { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; transition: all .3s ease; }
+        .sound-control:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .sound-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .sound-title { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .sound-icon { font-size: 1.5rem; }
+        .toggle-btn { width: 60px; height: 30px; background: rgba(255,255,255,0.2); border: none; border-radius: 15px; position: relative; cursor: pointer; transition: all .3s ease; }
+        .toggle-btn.active { background: #4CAF50; }
+        .toggle-btn::after { content: ''; width: 26px; height: 26px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: all .3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .toggle-btn.active::after { transform: translateX(30px); }
+        .volume-control { display: flex; align-items: center; gap: 10px; }
+        .volume-slider { flex: 1; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none; -webkit-appearance: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .volume-slider::-moz-range-thumb { width: 18px; height: 18px; background: white; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .master-controls { text-align: center; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 20px; }
+        .master-btn { background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 12px 24px; margin: 0 10px 10px; border-radius: 25px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all .3s ease; }
+        .master-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+        .schedule-row { margin-top: 12px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        .schedule-row input { width: 120px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.15); color: #fff; outline: none; }
+        .status { margin-top: 10px; font-size: .9rem; opacity: .9; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+        .playing { animation: pulse 2s infinite; }
+        .disabled-ui { pointer-events: none; opacity: .6; filter: grayscale(0.1); }
+
+        /* Fade banner */
+        .fade-banner {
+            position: sticky;
+            top: 0;
+            margin: 0 auto 0;
+            max-width: 720px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.6);
+            background: rgba(0,0,0,0.25);
+            padding: 10px 12px;
+            z-index: 1000;
+        }
+        .fade-row { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .fade-chip {
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .fade-time { opacity: .95; font-variant-numeric: tabular-nums; }
+        .fade-bar-wrap {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+        .fade-bar {
+            height: 100%;
+            width: 0%;
+            background: rgba(255,255,255,0.85);
+            transition: width .1s linear;
+        }
+
+        .qr-container { text-align: center; margin-top: 24px; }
+        .qr-container img { background: white; padding: 10px; border-radius: 12px; }
+        .qr-url { margin-top: 8px; font-size: .85rem; opacity: .9; word-break: break-all; }
+    </style>
 </head>
 <body>
-  <!-- ***** your existing BODY stays exactly the same ***** -->
-  <!-- (omitted here for brevity — keep all your HTML + <script> exactly as you posted) -->
+<div class="container">
+    <!-- Audio unlock banner (appears when needed) -->
+    <div id="unlockBanner" class="unlock-banner" hidden>
+        <div>🔊 Audio needs to be unlocked for playback</div>
+        <div style="font-size: 0.9rem; margin-top: 5px; opacity: 0.9;">
+            Tap the button below to enable audio, then try playing sounds again
+        </div>
+        <button id="unlockBtn" class="unlock-btn">Enable Audio</button>
+    </div>
 
-  <!-- Register service worker (add at very end, after your scripts) -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(console.error);
-      });
+    <!-- Fade banner (appears during slow fade for both roles) -->
+    <div id="fadeBanner" class="fade-banner" hidden>
+        <div class="fade-row" style="margin-bottom:8px;">
+            <span class="fade-chip">Fading out…</span>
+            <span id="fadeTime" class="fade-time">60s left</span>
+        </div>
+        <div class="fade-bar-wrap">
+            <div id="fadeBar" class="fade-bar"></div>
+        </div>
+    </div>
+
+    <h1>🎵 White Noise Player</h1>
+
+    <!-- Role switch -->
+    <div class="role-switch">
+        <span class="role-hint" id="roleHint">Select a role</span>
+        <div class="role-pill">
+            <button id="btn-dudo" class="role-btn">DUDO</button>
+            <button id="btn-papa" class="role-btn">PAPA</button>
+        </div>
+    </div>
+
+    <div class="controls disabled-ui" id="soundControls"></div>
+
+    <div class="master-controls disabled-ui" id="masterControls">
+        <button class="master-btn" id="btn-slowlyStopAll">Slowly Stop All</button>
+        <button class="master-btn" id="btn-stopAll">Stop All</button>
+        <button class="master-btn" id="btn-toggleMaster">Mute/Unmute</button>
+        <button class="master-btn" id="btn-resetAll">Reset</button>
+
+        <div class="schedule-row">
+            <label for="stopInMinutes">Stop in</label>
+            <input id="stopInMinutes" type="number" min="0" step="0.1" value="90"/>
+            <span>minutes</span>
+            <button class="master-btn" id="btn-scheduleStop">Set Timer</button>
+        </div>
+
+        <div class="status" id="status">Ready to play</div>
+
+        <!-- QR Code at the bottom -->
+        <div class="qr-container">
+            <p>📱 Scan to open this page:</p>
+            <img id="qrCode" alt="QR Code of this page" width="220" height="220"/>
+            <div id="qrUrl" class="qr-url"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // UUID
+    function uuidv4() {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
     }
-  </script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const remoteClientId = urlParams.get("client");
+    const userId = remoteClientId ?? uuidv4();
+
+    // ========= Relay Setup (using ntfy.sh) =========
+    const NTFY_TOPIC = `white-noise-dudo-papa-${userId}`;
+    const RELAY_POST_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
+    const RELAY_SSE_URL = `https://ntfy.sh/${NTFY_TOPIC}/sse`;
+
+    const CLIENT_ID = (() => Math.random().toString(36).slice(2))();
+    let CURRENT_ROLE = null; // 'DUDO' | 'PAPA'
+    let sse = null;
+
+    function debounce(fn, wait = 100) {
+        let t;
+        return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    }
+
+    const debouncedVolumeSenders = new Map();
+    function getDebouncedVolumeSender(soundId) {
+        if (!debouncedVolumeSenders.has(soundId)) {
+            debouncedVolumeSenders.set(
+                soundId,
+                debounce((vol) => sendRelayEvent('setVolume', { soundId, volume: vol }), 2000)
+            );
+        }
+        return debouncedVolumeSenders.get(soundId);
+    }
+
+    function setRole(role) {
+        CURRENT_ROLE = role;
+        document.getElementById('btn-dudo').classList.toggle('active', role === 'DUDO');
+        document.getElementById('btn-dudo').classList.toggle('inactive', role !== 'DUDO');
+        document.getElementById('btn-papa').classList.toggle('active', role === 'PAPA');
+        document.getElementById('btn-papa').classList.toggle('inactive', role !== 'PAPA');
+        const master = document.getElementById('masterControls');
+        const controls = document.getElementById('soundControls');
+
+        if (role === 'DUDO') {
+            master.classList.remove('disabled-ui');
+            controls.classList.remove('disabled-ui');
+            player?.primeAll();
+            startPolling();
+        } else {
+            master.classList.remove('disabled-ui');
+            controls.classList.remove('disabled-ui');
+            stopPolling();
+        }
+    }
+
+    async function sendRelayEvent(eventName, payload = {}) {
+        if (CURRENT_ROLE !== 'PAPA') return;
+        const body = JSON.stringify({
+            clientId: CLIENT_ID,
+            role: CURRENT_ROLE,
+            ts: Date.now(),
+            event: {name: eventName, ...payload}
+        });
+        try {
+            await fetch(RELAY_POST_URL, {method: 'POST', body}); // no headers ⇒ avoid CORS preflight
+        } catch (e) {
+            console.warn('Relay send failed:', e);
+        }
+    }
+
+    function startPolling() {
+        sse = new EventSource(RELAY_SSE_URL);
+        sse.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.event !== 'message') return;
+                const evt = JSON.parse(msg.message || '{}');
+                if (evt?.clientId === CLIENT_ID) return;
+                applyRemoteEvent(evt);
+            } catch {}
+        };
+    }
+
+    function stopPolling() {
+        if (sse) { sse.close(); sse = null; }
+    }
+
+    function applyRemoteEvent(wrapper) {
+        if (!wrapper || !wrapper.event) return;
+        const {name, soundId, seconds, minutes, volume} = wrapper.event;
+        switch (name) {
+            case 'toggle':
+                player.toggle(soundId);
+                break;
+            case 'setVolume':
+                if (typeof volume === 'number') {
+                    const slider = document.getElementById(`volume-${soundId}`);
+                    if (slider) slider.value = String(volume);
+                    player.setVolume(soundId, volume);
+                }
+                break;
+            case 'stopAll':
+                player.stopAll();
+                break;
+            case 'toggleMaster':
+                player.toggleMasterVolume();
+                break;
+            case 'slowlyStopAll':
+                player.slowlyStopAll(seconds ?? 60); // DUDO will show banner + fade
+                break;
+            case 'resetAll':
+                player.resetAll();
+                break;
+            case 'scheduleStop':
+                player.scheduleStopInMinutes(minutes ?? 90);
+                break;
+        }
+    }
+
+    // ========= Player =========
+    class WhiteNoisePlayer {
+        constructor() {
+            this.sounds = {};
+            this.masterLevel = 0.5;
+            this.isMuted = false;
+            this.previousMasterLevel = 0.5;
+            this.stopTimerId = null;
+            this.stopEta = null;
+            this.fadeIntervalId = null;
+            this.audioUnlocked = false;
+            this.pendingPlays = new Set();
+
+            // Fade UI state
+            this.fadeStartTs = null;
+            this.fadeEndTs = null;
+            this.fadeRafId = null;
+
+            this.soundDefinitions = [
+                { id: 'vacuum', name: 'Vacuum Cleaner', icon: '🧹', url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3' },
+                { id: 'train', name: 'Train', icon: '🚆', url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3' },
+                { id: 'city', name: 'City', icon: '🏙️', url: 'https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3' },
+                { id: 'tentrain', name: 'Tent Rain', icon: '⛺', url: 'https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3' },
+                { id: 'rain', name: 'Rain', icon: '🌧️', url: 'https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3' },
+                { id: 'waterfall', name: 'Waterfall', icon: '🏞️', url: 'https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3' },
+                { id: 'people', name: 'People', icon: '🗣️', url: 'https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3' },
+                { id: 'ocean', name: 'Ocean', icon: '🌊', url: 'https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3' },
+                { id: 'fire', name: 'Firecamp', icon: '🔥', url: 'https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3' },
+                { id: 'fan', name: 'Fan', icon: '🌀', url: 'https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3' },
+                { id: 'wind', name: 'Wind', icon: '💨', url: 'https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3' },
+                { id: 'pink', name: 'Pink Noise', icon: '🌸', url: 'https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3' },
+            ];
+
+            this.init();
+        }
+
+        init() {
+            // Create audio elements with better initialization for older Chrome
+            this.soundDefinitions.forEach(def => {
+                const a = new Audio();
+                a.src = def.url;
+                a.loop = true;
+                a.volume = 0;
+                a.muted = true; // Start muted to avoid autoplay issues
+
+                // Remove preload for older Chrome compatibility
+                a.preload = 'metadata'; // Changed from 'auto'
+
+                // Add event listeners for better error handling
+                a.addEventListener('loadstart', () => console.log(`Loading ${def.id}`));
+                a.addEventListener('canplaythrough', () => console.log(`Ready to play ${def.id}`));
+                a.addEventListener('error', (e) => console.warn(`Audio error for ${def.id}:`, e));
+
+                try { a.load(); } catch (e) { console.warn(`Load error for ${def.id}:`, e); }
+                this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
+            });
+
+            this.createSoundControls();
+            this.wireMasterButtons();
+            this.setupAudioUnlock();
+            this.updateStatus();
+        }
+
+        setupAudioUnlock() {
+            const unlockBanner = document.getElementById('unlockBanner');
+            const unlockBtn = document.getElementById('unlockBtn');
+
+            unlockBtn.addEventListener('click', async () => {
+                await this.unlockAudio();
+                unlockBanner.hidden = true;
+            });
+
+            // Auto-detect if audio unlock is needed
+            this.checkAudioUnlockNeeded();
+        }
+
+        async checkAudioUnlockNeeded() {
+            const testAudio = new Audio();
+            // Use a valid source (silent wav or tiny base64 clip)
+            testAudio.src =
+                "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+            testAudio.muted = true;
+
+            try {
+                const playPromise = testAudio.play();
+                if (playPromise) {
+                    await playPromise;
+                    testAudio.pause();
+                    this.audioUnlocked = true;
+                } else {
+                    this.audioUnlocked = false;
+                }
+            } catch (e) {
+                this.audioUnlocked = false;
+                const unlockBanner = document.getElementById("unlockBanner");
+                if (unlockBanner) unlockBanner.hidden = false;
+            }
+        }
+
+        async unlockAudio() {
+            console.log('Unlocking audio...');
+            this.audioUnlocked = true;
+
+            // Prime all audio elements with a user gesture
+            const promises = Object.values(this.sounds).map(async ({audio}) => {
+                try {
+                    audio.muted = false;
+                    audio.volume = 0;
+                    const playPromise = audio.play();
+                    if (playPromise) await playPromise;
+                    audio.pause();
+                    audio.currentTime = 0;
+                } catch (e) {
+                    console.warn('Failed to prime audio:', e);
+                }
+            });
+
+            await Promise.all(promises);
+
+            // Retry any pending plays
+            for (const soundId of this.pendingPlays) {
+                await this.start(soundId);
+            }
+            this.pendingPlays.clear();
+
+            this.setStatus('Audio unlocked - ready to play');
+        }
+
+        createSoundControls() {
+            const container = document.getElementById('soundControls');
+            this.soundDefinitions.forEach(sound => {
+                const controlDiv = document.createElement('div');
+                controlDiv.className = 'sound-control';
+                controlDiv.innerHTML = `
+          <div class="sound-header">
+            <div class="sound-title">
+              <span class="sound-icon">${sound.icon}</span>${sound.name}
+            </div>
+            <button class="toggle-btn" id="toggle-${sound.id}"></button>
+          </div>
+          <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" class="volume-slider" id="volume-${sound.id}" min="0" max="100" value="50">
+            <span id="vol-display-${sound.id}">50%</span>
+          </div>`;
+                container.appendChild(controlDiv);
+
+                const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
+                btn.addEventListener('click', async () => {
+                    if (CURRENT_ROLE === 'PAPA') {
+                        sendRelayEvent('toggle', { soundId: sound.id });
+                        // reflect toggle in PAPA UI immediately
+                        const btn = document.getElementById(`toggle-${sound.id}`);
+                        btn?.classList.toggle('active');
+                        btn?.closest('.sound-control')?.classList.toggle('playing');
+                    } else {
+                        await this.toggle(sound.id);
+                    }
+                });
+
+                const slider = controlDiv.querySelector(`#volume-${sound.id}`);
+                slider.addEventListener('input', (e) => {
+                    const vol = Number(e.target.value);
+                    this.setVolume(sound.id, vol);
+                    if (CURRENT_ROLE === 'PAPA') {
+                        getDebouncedVolumeSender(sound.id)(vol);
+                    }
+                });
+            });
+        }
+
+        wireMasterButtons() {
+            document.getElementById('btn-slowlyStopAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'PAPA') {
+                    // show visual feedback locally AND send command to DUDO
+                    this.beginFadeUI(60);
+                    sendRelayEvent('slowlyStopAll', { seconds: 60 });
+                } else {
+                    this.slowlyStopAll(60);
+                }
+            });
+
+            document.getElementById('btn-stopAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('stopAll');
+                else this.stopAll();
+            });
+
+            document.getElementById('btn-toggleMaster').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('toggleMaster');
+                else this.toggleMasterVolume();
+            });
+
+            document.getElementById('btn-resetAll').addEventListener('click', () => {
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('resetAll');
+                else this.resetAll();
+            });
+
+            document.getElementById('btn-scheduleStop').addEventListener('click', () => {
+                const val = Number(document.getElementById('stopInMinutes').value || 90);
+                if (CURRENT_ROLE === 'PAPA') sendRelayEvent('scheduleStop', { minutes: val });
+                else this.scheduleStopInMinutes(val);
+            });
+            document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
+            document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
+        }
+
+        async toggle(soundId) {
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+            if (entry.playing) this.stop(soundId);
+            else await this.start(soundId);
+            this.updateStatus();
+        }
+
+        async start(soundId) {
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+
+            // Check if audio is unlocked
+            if (!this.audioUnlocked && CURRENT_ROLE === 'DUDO') {
+                this.pendingPlays.add(soundId);
+                const unlockBanner = document.getElementById('unlockBanner');
+                if (unlockBanner) unlockBanner.hidden = false;
+                this.setStatus('Audio blocked - tap "Enable Audio" button first');
+                return;
+            }
+
+            const volumeSlider = document.getElementById(`volume-${soundId}`);
+            entry.gain = Number(volumeSlider?.value ?? 50) / 100;
+            entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
+
+            try {
+                if (CURRENT_ROLE === 'DUDO') {
+                    // Ensure audio is ready before playing
+                    if (entry.audio.readyState < 2) {
+                        this.setStatus(`Loading ${soundId}...`);
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                            const onReady = () => {
+                                clearTimeout(timeout);
+                                entry.audio.removeEventListener('canplaythrough', onReady);
+                                entry.audio.removeEventListener('error', onError);
+                                resolve();
+                            };
+                            const onError = (e) => {
+                                clearTimeout(timeout);
+                                entry.audio.removeEventListener('canplaythrough', onReady);
+                                entry.audio.removeEventListener('error', onError);
+                                reject(e);
+                            };
+                            entry.audio.addEventListener('canplaythrough', onReady);
+                            entry.audio.addEventListener('error', onError);
+                        });
+                    }
+                    await entry.audio.play();
+                }
+                entry.playing = true;
+            } catch (err) {
+                console.warn(`Failed to play ${soundId}:`, err);
+                if (err.name === 'NotAllowedError' || err.message.includes('user activation')) {
+                    this.audioUnlocked = false;
+                    this.pendingPlays.add(soundId);
+                    const unlockBanner = document.getElementById('unlockBanner');
+                    if (unlockBanner) unlockBanner.hidden = false;
+                    this.setStatus('Audio blocked - tap "Enable Audio" button first');
+                } else {
+                    this.setStatus(`Failed to play ${soundId}: ${err.message}`);
+                }
+                return;
+            }
+
+            const btn = document.getElementById(`toggle-${soundId}`);
+            btn?.classList.add('active');
+            btn?.closest('.sound-control')?.classList.add('playing');
+        }
+
+        stop(soundId) {
+            const entry = this.sounds[soundId];
+            if (!entry) return;
+            try { entry.audio.pause(); entry.audio.currentTime = 0; } catch {}
+            entry.playing = false;
+            this.pendingPlays.delete(soundId);
+            const btn = document.getElementById(`toggle-${soundId}`);
+            btn?.classList.remove('active');
+            btn?.closest('.sound-control')?.classList.remove('playing');
+        }
+
+        stopAll() {
+            Object.keys(this.sounds).forEach(id => this.stop(id));
+            this.endFadeUI(); // hide banner if visible
+            this.updateStatus();
+        }
+
+        setVolume(soundId, volume) {
+            const vol0to1 = Number(volume) / 100;
+            const entry = this.sounds[soundId];
+            const slider = document.getElementById(`volume-${soundId}`);
+            const label = document.getElementById(`vol-display-${soundId}`);
+            if (slider && slider.value !== String(volume)) slider.value = String(volume);
+            if (label) label.textContent = `${Math.round(Number(volume))}%`;
+            if (entry) {
+                entry.gain = vol0to1;
+                entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * vol0to1;
+            }
+        }
+
+        toggleMasterVolume() {
+            if (this.isMuted) {
+                this.isMuted = false;
+                this.masterLevel = this.previousMasterLevel || 0.5;
+            } else {
+                this.previousMasterLevel = this.masterLevel;
+                this.isMuted = true;
+            }
+            this.applyMasterToAll();
+            this.updateStatus();
+        }
+
+        applyMasterToAll() {
+            const level = this.isMuted ? 0 : this.masterLevel;
+            Object.values(this.sounds).forEach(({audio, gain}) => {
+                audio.volume = level * gain;
+            });
+        }
+
+        // ---------- Fade UI helpers ----------
+        beginFadeUI(seconds) {
+            const banner = document.getElementById('fadeBanner');
+            const bar = document.getElementById('fadeBar');
+            const timeEl = document.getElementById('fadeTime');
+
+            const durMs = Math.max(100, Number(seconds) * 1000 || 60000);
+            this.fadeStartTs = Date.now();
+            this.fadeEndTs = this.fadeStartTs + durMs;
+
+            banner.hidden = false;
+
+            const tick = () => {
+                const now = Date.now();
+                const total = this.fadeEndTs - this.fadeStartTs;
+                const remain = Math.max(0, this.fadeEndTs - now);
+                const elapsed = Math.min(total, now - this.fadeStartTs);
+                const pct = total > 0 ? (elapsed / total) : 1;
+
+                if (timeEl) timeEl.textContent = `${Math.ceil(remain / 1000)}s left`;
+                if (bar) bar.style.width = `${Math.round(pct * 100)}%`;
+
+                if (remain > 0) {
+                    this.fadeRafId = requestAnimationFrame(tick);
+                } else {
+                    // keep bar filled until the audio fade function hides banner
+                    this.fadeRafId = null;
+                }
+            };
+            if (this.fadeRafId) cancelAnimationFrame(this.fadeRafId);
+            tick();
+        }
+
+        endFadeUI() {
+            const banner = document.getElementById('fadeBanner');
+            const bar = document.getElementById('fadeBar');
+            const timeEl = document.getElementById('fadeTime');
+            if (this.fadeRafId) { cancelAnimationFrame(this.fadeRafId); this.fadeRafId = null; }
+            if (bar) bar.style.width = '0%';
+            if (timeEl) timeEl.textContent = '';
+            if (banner) banner.hidden = true;
+            this.fadeStartTs = null;
+            this.fadeEndTs = null;
+        }
+        // ------------------------------------
+
+        slowlyStopAll(seconds = 60) {
+            const durMs = Math.max(100, Number(seconds) * 1000 || 60000);
+
+            // Start/refresh the visual banner for BOTH roles
+            this.beginFadeUI(seconds);
+
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
+
+            const startLevel = this.isMuted ? 0 : this.masterLevel;
+            const startTs = Date.now();
+
+            this.setStatus(`Fading out over ${Math.round(durMs / 1000)}s…`);
+
+            this.fadeIntervalId = setInterval(() => {
+                const elapsed = Date.now() - startTs;
+                const t = Math.min(1, elapsed / durMs);
+                const newLevel = startLevel * (1 - t);
+                this.masterLevel = newLevel;
+                this.applyMasterToAll();
+
+                if (t >= 1) {
+                    clearInterval(this.fadeIntervalId);
+                    this.fadeIntervalId = null;
+                    this.stopAll();
+                    // restore previous master for next play
+                    this.isMuted = false;
+                    this.masterLevel = this.previousMasterLevel || 0.5;
+                    this.endFadeUI(); // ensure banner hides
+                    this.updateStatus();
+                }
+            }, 50);
+        }
+
+        resetAll() {
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
+            if (this.fadeIntervalId) { clearInterval(this.fadeIntervalId); this.fadeIntervalId = null; }
+            this.endFadeUI();
+
+            this.stopAll();
+            this.pendingPlays.clear();
+
+            this.soundDefinitions.forEach(s => {
+                const slider = document.getElementById(`volume-${s.id}`);
+                const label = document.getElementById(`vol-display-${s.id}`);
+                if (slider) slider.value = 50;
+                if (label) label.textContent = '50%';
+                const btn = document.getElementById(`toggle-${s.id}`);
+                btn?.classList.remove('active');
+                btn?.closest('.sound-control')?.classList.remove('playing');
+            });
+
+            this.isMuted = false;
+            this.masterLevel = 0.5;
+            this.previousMasterLevel = 0.5;
+
+            const inp = document.getElementById('stopInMinutes');
+            if (inp) inp.value = 90;
+
+            // Hide unlock banner on reset
+            const unlockBanner = document.getElementById('unlockBanner');
+            if (unlockBanner) unlockBanner.hidden = true;
+
+            this.setStatus('Reset to initial state');
+        }
+
+        scheduleStopInMinutes(minutes) {
+            if (this.stopTimerId) { clearTimeout(this.stopTimerId); this.stopTimerId = null; this.stopEta = null; }
+
+            const m = Math.max(0, Number(minutes) || 0);
+            if (m === 0) { this.slowlyStopAll(5); return; }
+            if (m <= 1) { this.slowlyStopAll(m * 60); return; }
+
+            const delayMs = (m - 1) * 60 * 1000;
+            const eta = new Date(Date.now() + delayMs + 60 * 1000);
+            this.stopEta = eta;
+
+            this.stopTimerId = setTimeout(() => {
+                // When the last minute starts, show the banner and fade
+                this.slowlyStopAll(60);
+                this.stopTimerId = null;
+                this.stopEta = null;
+            }, delayMs);
+
+            const hh = eta.getHours().toString().padStart(2, '0');
+            const mm = eta.getMinutes().toString().padStart(2, '0');
+            this.setStatus(`Scheduled stop at ${hh}:${mm} (last minute will fade out)`);
+        }
+
+        setStatus(text) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+        }
+
+        updateStatus() {
+            const n = Object.values(this.sounds).filter(s => s.playing).length;
+            const status = document.getElementById('status');
+
+            if (this.pendingPlays.size > 0) {
+                status.textContent = `${this.pendingPlays.size} sound${this.pendingPlays.size > 1 ? 's' : ''} pending - tap "Enable Audio"`;
+                return;
+            }
+
+            if (this.stopEta) {
+                const hh = this.stopEta.getHours().toString().padStart(2, '0');
+                const mm = this.stopEta.getMinutes().toString().padStart(2, '0');
+                status.textContent = `${n === 0 ? 'Ready' : `${n} sound${n > 1 ? 's' : ''} playing`} • Scheduled stop at ${hh}:${mm}`;
+                return;
+            }
+            if (n === 0) status.textContent = 'Ready to play';
+            else if (this.isMuted) status.textContent = `${n} sound${n > 1 ? 's' : ''} playing (Muted)`;
+            else status.textContent = `${n} sound${n > 1 ? 's' : ''} currently playing`;
+        }
+
+        primeAll() {
+            if (CURRENT_ROLE !== 'DUDO') return;
+            if (!this.audioUnlocked) return;
+
+            Object.values(this.sounds).forEach(({audio}) => {
+                const prevVol = audio.volume;
+                audio.volume = 0;
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.volume = prevVol;
+                }).catch(() => {});
+            });
+        }
+    }
+
+    // Initialize
+    let player;
+    window.addEventListener('load', () => {
+        player = new WhiteNoisePlayer();
+    });
+
+    // Expose (handy for console)
+    window.setRole = setRole;
+
+    // ----- QR code: simple <img> endpoint (no CORS needed) -----
+    const url = `${window.location.href}?client=${userId}`;
+    const qrImg = document.getElementById('qrCode');
+    const qrUrlText = document.getElementById('qrUrl');
+    const QR_ENDPOINT = 'https://api.qrserver.com/v1/create-qr-code/';
+    const params = new URLSearchParams({size: '220x220', margin: '0', data: url});
+    qrImg.src = `${QR_ENDPOINT}?${params.toString()}`;
+    qrUrlText.textContent = url;
+</script>
 </body>
 </html>
