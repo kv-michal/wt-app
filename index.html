@@ -371,31 +371,8 @@
                 unlockBanner.hidden = true;
             });
 
-            // Only check for older Chrome versions that need unlock
-            if (this.isOlderChromeVersion()) {
-                this.checkAudioUnlockNeeded();
-            } else {
-                // Modern browsers - assume audio works
-                this.audioUnlocked = true;
-            }
-        }
-
-        isOlderChromeVersion() {
-            const userAgent = navigator.userAgent;
-            
-            // Check if it's Chrome/Chromium-based
-            const isChromeish = /Chrome\/(\d+)/.test(userAgent) && !/Edg\//.test(userAgent);
-            if (!isChromeish) return false;
-            
-            // Extract Chrome version
-            const chromeVersionMatch = userAgent.match(/Chrome\/(\d+)/);
-            if (!chromeVersionMatch) return false;
-            
-            const chromeVersion = parseInt(chromeVersionMatch[1], 10);
-            
-            // Show unlock banner for Chrome versions 106 and below
-            // (these versions had stricter autoplay policies)
-            return chromeVersion <= 110;
+            // Auto-detect if audio unlock is needed
+            this.checkAudioUnlockNeeded();
         }
 
         async checkAudioUnlockNeeded() {
@@ -412,7 +389,7 @@
                     this.audioUnlocked = true;
                 }
             } catch (e) {
-                // Autoplay blocked - show unlock banner for older Chrome
+                // Autoplay blocked - show unlock banner
                 this.audioUnlocked = false;
                 const unlockBanner = document.getElementById('unlockBanner');
                 if (unlockBanner) unlockBanner.hidden = false;
@@ -538,8 +515,8 @@
             const entry = this.sounds[soundId];
             if (!entry) return;
             
-            // Check if audio is unlocked (only for older Chrome versions)
-            if (!this.audioUnlocked && CURRENT_ROLE === 'DUDO' && this.isOlderChromeVersion()) {
+            // Check if audio is unlocked
+            if (!this.audioUnlocked && CURRENT_ROLE === 'DUDO') {
                 this.pendingPlays.add(soundId);
                 const unlockBanner = document.getElementById('unlockBanner');
                 if (unlockBanner) unlockBanner.hidden = false;
@@ -553,8 +530,8 @@
 
             try {
                 if (CURRENT_ROLE === 'DUDO') { 
-                    // For older Chrome, ensure audio is ready before playing
-                    if (this.isOlderChromeVersion() && entry.audio.readyState < 2) {
+                    // Ensure audio is ready before playing
+                    if (entry.audio.readyState < 2) {
                         this.setStatus(`Loading ${soundId}...`);
                         await new Promise((resolve, reject) => {
                             const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
@@ -579,15 +556,12 @@
                 entry.playing = true;
             } catch (err) {
                 console.warn(`Failed to play ${soundId}:`, err);
-                if ((err.name === 'NotAllowedError' || err.message.includes('user activation')) && this.isOlderChromeVersion()) {
+                if (err.name === 'NotAllowedError' || err.message.includes('user activation')) {
                     this.audioUnlocked = false;
                     this.pendingPlays.add(soundId);
                     const unlockBanner = document.getElementById('unlockBanner');
                     if (unlockBanner) unlockBanner.hidden = false;
                     this.setStatus('Audio blocked - tap "Enable Audio" button first');
-                } else if (err.name === 'NotAllowedError' || err.message.includes('user activation')) {
-                    // Modern browsers - try to handle gracefully without banner
-                    this.setStatus('Please interact with the page first, then try again');
                 } else {
                     this.setStatus(`Failed to play ${soundId}: ${err.message}`);
                 }
