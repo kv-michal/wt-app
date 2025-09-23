@@ -11,21 +11,19 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>White Noise Player</title>
-    <!-- Preload hints to encourage early caching (no CORS preflight; plain link tags) -->
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3">
-    <link rel="preload" as="audio"
-          href="https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3">
-    <link rel="preload" as="audio"
-          href="https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3">
-    <link rel="preload" as="audio" href="https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3">
+    <!-- Preload hints for local MP3 files -->
+    <link rel="preload" as="audio" href="/sounds/vacuum-cleaner.mp3">
+    <link rel="preload" as="audio" href="/sounds/train.mp3">
+    <link rel="preload" as="audio" href="/sounds/city-streets.mp3">
+    <link rel="preload" as="audio" href="/sounds/tent-rain.mp3">
+    <link rel="preload" as="audio" href="/sounds/lake-rain.mp3">
+    <link rel="preload" as="audio" href="/sounds/waterfall.mp3">
+    <link rel="preload" as="audio" href="/sounds/mall-chatter.mp3">
+    <link rel="preload" as="audio" href="/sounds/ocean-waves.mp3">
+    <link rel="preload" as="audio" href="/sounds/campfire.mp3">
+    <link rel="preload" as="audio" href="/sounds/warehouse-fans.mp3">
+    <link rel="preload" as="audio" href="/sounds/autumn-wind.mp3">
+    <link rel="preload" as="audio" href="/sounds/pink-noise.mp3">
 
     <style>
         * {
@@ -93,6 +91,30 @@
             font-size: .95rem;
         }
 
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -112,6 +134,21 @@
         .sound-control:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .sound-control.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .sound-control.loading::after {
+            content: 'Loading...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
 
         .sound-header {
@@ -227,6 +264,11 @@
             transform: translateY(-2px);
         }
 
+        .master-btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         .schedule-row {
             margin-top: 12px;
             display: flex;
@@ -337,6 +379,12 @@
             opacity: .9;
             word-break: break-all;
         }
+
+        .audio-info {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -353,6 +401,15 @@
     </div>
 
     <h1>🎵 White Noise Player</h1>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-indicator">
+        <div>Loading audio files...</div>
+        <div id="loadingText">Initializing Web Audio API...</div>
+        <div class="loading-bar">
+            <div id="loadingProgress" class="loading-progress"></div>
+        </div>
+    </div>
 
     <!-- Role switch -->
     <div class="role-switch">
@@ -378,7 +435,8 @@
             <button class="master-btn" id="btn-scheduleStop">Set Timer</button>
         </div>
 
-        <div class="status" id="status">Ready to play</div>
+        <div class="status" id="status">Initializing...</div>
+        <div class="audio-info" id="audioInfo">Web Audio API: Initializing...</div>
 
         <!-- QR Code at the bottom -->
         <div class="qr-container">
@@ -442,7 +500,6 @@
         if (role === 'DUDO') {
             master.classList.remove('disabled-ui');
             controls.classList.remove('disabled-ui');
-            player?.primeAll();
             startPolling();
         } else {
             master.classList.remove('disabled-ui');
@@ -519,9 +576,11 @@
         }
     }
 
-    // ========= Player =========
-    class WhiteNoisePlayer {
+    // ========= Web Audio API Player =========
+    class WebAudioWhiteNoisePlayer {
         constructor() {
+            this.audioContext = null;
+            this.masterGain = null;
             this.sounds = {};
             this.masterLevel = 0.5;
             this.isMuted = false;
@@ -540,138 +599,220 @@
                     id: 'vacuum',
                     name: 'Vacuum Cleaner',
                     icon: '🧹',
-                    url: 'https://img.tmsoft.com/sleep-sounds/vacuum-cleaner-2014-09-10.mp3'
+                    url: '/sounds/vacuum-cleaner.mp3'
                 },
                 {
                     id: 'train',
                     name: 'Train',
                     icon: '🚆',
-                    url: 'https://img.tmsoft.com/sleep-sounds/train-2014-09-10.mp3'
+                    url: '/sounds/train.mp3'
                 },
                 {
                     id: 'city',
                     name: 'City',
                     icon: '🏙️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/city-streets-2014-09-12.mp3'
+                    url: '/sounds/city-streets.mp3'
                 },
                 {
                     id: 'tentrain',
                     name: 'Tent Rain',
                     icon: '⛺',
-                    url: 'https://img.tmsoft.com/sleep-sounds/tent-rain-2014-10-31.mp3'
+                    url: '/sounds/tent-rain.mp3'
                 },
                 {
                     id: 'rain',
                     name: 'Rain',
                     icon: '🌧️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/lake-rain-2014-10-31.mp3'
+                    url: '/sounds/lake-rain.mp3'
                 },
                 {
                     id: 'waterfall',
                     name: 'Waterfall',
                     icon: '🏞️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/huge-waterfall-sound-2014-12-09.mp3'
+                    url: '/sounds/waterfall.mp3'
                 },
                 {
                     id: 'people',
                     name: 'People',
                     icon: '🗣️',
-                    url: 'https://img.tmsoft.com/sleep-sounds/mall-chatter-sound-2015-02-23.mp3'
+                    url: '/sounds/mall-chatter.mp3'
                 },
                 {
                     id: 'ocean',
                     name: 'Ocean',
                     icon: '🌊',
-                    url: 'https://img.tmsoft.com/sleep-sounds/peaceful-ocean-waves-sound-2020-07-03.mp3'
+                    url: '/sounds/ocean-waves.mp3'
                 },
                 {
                     id: 'fire',
                     name: 'Firecamp',
                     icon: '🔥',
-                    url: 'https://img.tmsoft.com/sleep-sounds/summertime-forest-campfire-4khz-cut-tinnitus-relief-loopable-2024-08-09.mp3'
+                    url: '/sounds/campfire.mp3'
                 },
                 {
                     id: 'fan',
                     name: 'Fan',
                     icon: '🌀',
-                    url: 'https://img.tmsoft.com/sleep-sounds/soft-warehouse-fans-2020-05-15.mp3'
+                    url: '/sounds/warehouse-fans.mp3'
                 },
                 {
                     id: 'wind',
                     name: 'Wind',
                     icon: '💨',
-                    url: 'https://img.tmsoft.com/sleep-sounds/late-autumn-wind-loopable-no-fade-2025-08-25.mp3'
+                    url: '/sounds/autumn-wind.mp3'
                 },
                 {
                     id: 'pink',
                     name: 'Pink Noise',
                     icon: '🌸',
-                    url: 'https://img.tmsoft.com/sleep-sounds/pink-noise-sound-2020-06-19.mp3'
+                    url: '/sounds/pink-noise.mp3'
                 },
             ];
+
+            this.loadedCount = 0;
+            this.totalSounds = this.soundDefinitions.length;
+            this.isReady = false;
 
             this.init();
         }
 
-        init() {
-            this.soundDefinitions.forEach(def => {
-                const a = new Audio();
-                a.src = def.url;
-                a.loop = true;
-                a.preload = 'auto';
-                a.volume = 0;
+        async init() {
+            try {
+                // Initialize Web Audio API
+                this.updateAudioInfo('Initializing Web Audio API...');
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.audioContext.createGain();
+                this.masterGain.connect(this.audioContext.destination);
+                this.masterGain.gain.value = this.masterLevel;
+
+                this.updateAudioInfo(`Web Audio API initialized (${this.audioContext.sampleRate}Hz)`);
+
+                // Load all audio files
+                await this.loadAllSounds();
+
+                // Create UI controls
+                this.createSoundControls();
+                this.wireMasterButtons();
+
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+
+                this.isReady = true;
+                this.updateStatus();
+                this.updateAudioInfo(`Ready - ${this.totalSounds} sounds loaded`);
+
+            } catch (error) {
+                console.error('Failed to initialize Web Audio API:', error);
+                this.updateStatus('Failed to initialize audio - please refresh the page');
+                this.updateAudioInfo('Error: ' + error.message);
+            }
+        }
+
+        updateLoadingProgress(loaded, total, currentFile = '') {
+            const percentage = Math.round((loaded / total) * 100);
+            document.getElementById('loadingProgress').style.width = `${percentage}%`;
+            document.getElementById('loadingText').textContent =
+                currentFile ? `Loading: ${currentFile} (${loaded}/${total})` : `${loaded}/${total} files loaded`;
+        }
+
+        updateAudioInfo(text) {
+            const el = document.getElementById('audioInfo');
+            if (el) el.textContent = text;
+        }
+
+        async loadAllSounds() {
+            this.updateLoadingProgress(0, this.totalSounds, 'Starting...');
+
+            const loadPromises = this.soundDefinitions.map(async (def, index) => {
                 try {
-                    a.load();
-                } catch {
+                    this.updateLoadingProgress(this.loadedCount, this.totalSounds, def.name);
+
+                    const response = await fetch(def.url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+                    // Create sound object with Web Audio nodes
+                    this.sounds[def.id] = {
+                        buffer: audioBuffer,
+                        source: null,
+                        gainNode: null,
+                        gain: 0.5,
+                        playing: false,
+                        definition: def
+                    };
+
+                    this.loadedCount++;
+                    this.updateLoadingProgress(this.loadedCount, this.totalSounds, def.name);
+
+                } catch (error) {
+                    console.error(`Failed to load ${def.name}:`, error);
+                    this.updateLoadingProgress(this.loadedCount, this.totalSounds, `Error loading ${def.name}`);
+
+                    // Create placeholder for failed loads
+                    this.sounds[def.id] = {
+                        buffer: null,
+                        source: null,
+                        gainNode: null,
+                        gain: 0.5,
+                        playing: false,
+                        definition: def,
+                        error: error.message
+                    };
                 }
-                this.sounds[def.id] = {audio: a, gain: 0.5, playing: false};
             });
 
-            this.createSoundControls();
-            this.wireMasterButtons();
-            this.updateStatus();
+            await Promise.all(loadPromises);
         }
 
         createSoundControls() {
             const container = document.getElementById('soundControls');
             this.soundDefinitions.forEach(sound => {
+                const soundData = this.sounds[sound.id];
+                const hasError = soundData && soundData.error;
+
                 const controlDiv = document.createElement('div');
-                controlDiv.className = 'sound-control';
+                controlDiv.className = `sound-control ${hasError ? 'loading' : ''}`;
                 controlDiv.innerHTML = `
           <div class="sound-header">
             <div class="sound-title">
               <span class="sound-icon">${sound.icon}</span>${sound.name}
+              ${hasError ? ' ❌' : ''}
             </div>
-            <button class="toggle-btn" id="toggle-${sound.id}"></button>
+            <button class="toggle-btn" id="toggle-${sound.id}" ${hasError ? 'disabled' : ''}></button>
           </div>
           <div class="volume-control">
             <span>🔊</span>
-            <input type="range" class="volume-slider" id="volume-${sound.id}" min="0" max="100" value="50">
+            <input type="range" class="volume-slider" id="volume-${sound.id}" min="0" max="100" value="50" ${hasError ? 'disabled' : ''}>
             <span id="vol-display-${sound.id}">50%</span>
-          </div>`;
+          </div>
+          ${hasError ? `<div class="audio-info">Error: ${soundData.error}</div>` : ''}`;
                 container.appendChild(controlDiv);
 
-                const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
-                btn.addEventListener('click', async () => {
-                    if (CURRENT_ROLE === 'PAPA') {
-                        sendRelayEvent('toggle', {soundId: sound.id});
-                        // reflect toggle in PAPA UI immediately
-                        const btn = document.getElementById(`toggle-${sound.id}`);
-                        btn?.classList.toggle('active');
-                        btn?.closest('.sound-control')?.classList.toggle('playing');
-                    } else {
-                        await this.toggle(sound.id);
-                    }
-                });
+                if (!hasError) {
+                    const btn = controlDiv.querySelector(`#toggle-${sound.id}`);
+                    btn.addEventListener('click', async () => {
+                        if (CURRENT_ROLE === 'PAPA') {
+                            sendRelayEvent('toggle', {soundId: sound.id});
+                            // reflect toggle in PAPA UI immediately
+                            const btn = document.getElementById(`toggle-${sound.id}`);
+                            btn?.classList.toggle('active');
+                            btn?.closest('.sound-control')?.classList.toggle('playing');
+                        } else {
+                            await this.toggle(sound.id);
+                        }
+                    });
 
-                const slider = controlDiv.querySelector(`#volume-${sound.id}`);
-                slider.addEventListener('input', (e) => {
-                    const vol = Number(e.target.value);
-                    this.setVolume(sound.id, vol);
-                    if (CURRENT_ROLE === 'PAPA') {
-                        getDebouncedVolumeSender(sound.id)(vol);
-                    }
-                });
+                    const slider = controlDiv.querySelector(`#volume-${sound.id}`);
+                    slider.addEventListener('input', (e) => {
+                        const vol = Number(e.target.value);
+                        this.setVolume(sound.id, vol);
+                        if (CURRENT_ROLE === 'PAPA') {
+                            getDebouncedVolumeSender(sound.id)(vol);
+                        }
+                    });
+                }
             });
         }
 
@@ -706,48 +847,94 @@
                 if (CURRENT_ROLE === 'PAPA') sendRelayEvent('scheduleStop', {minutes: val});
                 else this.scheduleStopInMinutes(val);
             });
+
             document.getElementById('btn-dudo').addEventListener('click', () => setRole('DUDO'));
             document.getElementById('btn-papa').addEventListener('click', () => setRole('PAPA'));
         }
 
         async toggle(soundId) {
+            if (!this.isReady) return;
+
             const entry = this.sounds[soundId];
-            if (!entry) return;
-            if (entry.playing) this.stop(soundId);
-            else await this.start(soundId);
+            if (!entry || entry.error) return;
+
+            if (entry.playing) {
+                this.stop(soundId);
+            } else {
+                await this.start(soundId);
+            }
             this.updateStatus();
         }
 
         async start(soundId) {
             const entry = this.sounds[soundId];
-            if (!entry) return;
-            const volumeSlider = document.getElementById(`volume-${soundId}`);
-            entry.gain = Number(volumeSlider?.value ?? 50) / 100;
-            entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * entry.gain;
+            if (!entry || entry.error || !entry.buffer) return;
 
             try {
-                if (CURRENT_ROLE === 'DUDO') {
-                    await entry.audio.play();
+                // Resume audio context if suspended (required for autoplay policy)
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
                 }
+
+                // Stop existing source if any
+                if (entry.source) {
+                    entry.source.stop();
+                    entry.source.disconnect();
+                }
+
+                // Create new source and gain node
+                entry.source = this.audioContext.createBufferSource();
+                entry.gainNode = this.audioContext.createGain();
+
+                // Set up the audio graph: source -> gainNode -> masterGain -> destination
+                entry.source.buffer = entry.buffer;
+                entry.source.loop = true;
+                entry.source.connect(entry.gainNode);
+                entry.gainNode.connect(this.masterGain);
+
+                // Set volume
+                const volumeSlider = document.getElementById(`volume-${soundId}`);
+                if (volumeSlider) {
+                    entry.gain = Number(volumeSlider.value) / 100;
+                }
+                entry.gainNode.gain.value = entry.gain;
+
+                // Start playing
+                entry.source.start();
                 entry.playing = true;
-            } catch (err) {
-                this.setStatus('Tap any control to enable audio (autoplay blocked). Then try again.');
-                return;
+
+                // Update UI
+                const btn = document.getElementById(`toggle-${soundId}`);
+                btn?.classList.add('active');
+                btn?.closest('.sound-control')?.classList.add('playing');
+
+            } catch (error) {
+                console.error(`Failed to start ${soundId}:`, error);
+                this.setStatus(`Error playing ${soundId}: ${error.message}`);
             }
-            const btn = document.getElementById(`toggle-${soundId}`);
-            btn?.classList.add('active');
-            btn?.closest('.sound-control')?.classList.add('playing');
         }
 
         stop(soundId) {
             const entry = this.sounds[soundId];
-            if (!entry) return;
+            if (!entry || !entry.playing) return;
+
             try {
-                entry.audio.pause();
-                entry.audio.currentTime = 0;
-            } catch {
+                if (entry.source) {
+                    entry.source.stop();
+                    entry.source.disconnect();
+                    entry.source = null;
+                }
+                if (entry.gainNode) {
+                    entry.gainNode.disconnect();
+                    entry.gainNode = null;
+                }
+            } catch (error) {
+                console.warn(`Error stopping ${soundId}:`, error);
             }
+
             entry.playing = false;
+
+            // Update UI
             const btn = document.getElementById(`toggle-${soundId}`);
             btn?.classList.remove('active');
             btn?.closest('.sound-control')?.classList.remove('playing');
@@ -764,11 +951,15 @@
             const entry = this.sounds[soundId];
             const slider = document.getElementById(`volume-${soundId}`);
             const label = document.getElementById(`vol-display-${soundId}`);
+
             if (slider && slider.value !== String(volume)) slider.value = String(volume);
             if (label) label.textContent = `${Math.round(Number(volume))}%`;
+
             if (entry) {
                 entry.gain = vol0to1;
-                entry.audio.volume = (this.isMuted ? 0 : this.masterLevel) * vol0to1;
+                if (entry.gainNode) {
+                    entry.gainNode.gain.value = vol0to1;
+                }
             }
         }
 
@@ -779,16 +970,14 @@
             } else {
                 this.previousMasterLevel = this.masterLevel;
                 this.isMuted = true;
+                this.masterLevel = 0;
             }
-            this.applyMasterToAll();
-            this.updateStatus();
-        }
 
-        applyMasterToAll() {
-            const level = this.isMuted ? 0 : this.masterLevel;
-            Object.values(this.sounds).forEach(({audio, gain}) => {
-                audio.volume = level * gain;
-            });
+            if (this.masterGain) {
+                this.masterGain.gain.value = this.masterLevel;
+            }
+
+            this.updateStatus();
         }
 
         // ---------- Fade UI helpers ----------
@@ -861,8 +1050,10 @@
                 const elapsed = Date.now() - startTs;
                 const t = Math.min(1, elapsed / durMs);
                 const newLevel = startLevel * (1 - t);
-                this.masterLevel = newLevel;
-                this.applyMasterToAll();
+
+                if (this.masterGain) {
+                    this.masterGain.gain.value = newLevel;
+                }
 
                 if (t >= 1) {
                     clearInterval(this.fadeIntervalId);
@@ -871,6 +1062,9 @@
                     // restore previous master for next play
                     this.isMuted = false;
                     this.masterLevel = this.previousMasterLevel || 0.5;
+                    if (this.masterGain) {
+                        this.masterGain.gain.value = this.masterLevel;
+                    }
                     this.endFadeUI(); // ensure banner hides
                     this.updateStatus();
                 }
@@ -899,11 +1093,21 @@
                 const btn = document.getElementById(`toggle-${s.id}`);
                 btn?.classList.remove('active');
                 btn?.closest('.sound-control')?.classList.remove('playing');
+
+                // Reset sound data
+                const entry = this.sounds[s.id];
+                if (entry && !entry.error) {
+                    entry.gain = 0.5;
+                }
             });
 
             this.isMuted = false;
             this.masterLevel = 0.5;
             this.previousMasterLevel = 0.5;
+
+            if (this.masterGain) {
+                this.masterGain.gain.value = this.masterLevel;
+            }
 
             const inp = document.getElementById('stopInMinutes');
             if (inp) inp.value = 90;
@@ -946,12 +1150,19 @@
 
         setStatus(text) {
             const status = document.getElementById('status');
-            status.textContent = text;
+            if (status) status.textContent = text;
         }
 
         updateStatus() {
-            const n = Object.values(this.sounds).filter(s => s.playing).length;
+            if (!this.isReady) {
+                this.setStatus('Initializing...');
+                return;
+            }
+
+            const playingSounds = Object.values(this.sounds).filter(s => s.playing && !s.error);
+            const n = playingSounds.length;
             const status = document.getElementById('status');
+
             if (this.stopEta) {
                 const hh = this.stopEta.getHours().toString().padStart(2, '0');
                 const mm = this.stopEta.getMinutes().toString().padStart(2, '0');
@@ -962,26 +1173,12 @@
             else if (this.isMuted) status.textContent = `${n} sound${n > 1 ? 's' : ''} playing (Muted)`;
             else status.textContent = `${n} sound${n > 1 ? 's' : ''} currently playing`;
         }
-
-        primeAll() {
-            if (CURRENT_ROLE !== 'DUDO') return;
-            Object.values(this.sounds).forEach(({audio}) => {
-                const prevVol = audio.volume;
-                audio.volume = 0;
-                audio.play().then(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                    audio.volume = prevVol;
-                }).catch(() => {
-                });
-            });
-        }
     }
 
     // Initialize
     let player;
     window.addEventListener('load', () => {
-        player = new WhiteNoisePlayer();
+        player = new WebAudioWhiteNoisePlayer();
     });
 
     // Expose (handy for console)
@@ -998,3 +1195,4 @@
 </script>
 </body>
 </html>
+
